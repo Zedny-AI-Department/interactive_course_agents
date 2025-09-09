@@ -57,7 +57,7 @@ class ParagraphWithoutVisualModel(BaseModel):
 
 
 class ParagraphWithVisualModel(ParagraphWithoutVisualModel):
-    visuals: VisualItemModel
+    visuals: Optional[VisualItemModel]
 
 
 class ParagraphWithVisualListModel(BaseModel):

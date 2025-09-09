@@ -78,9 +78,9 @@ class DataProcessingService:
             # Check paragraph words for matching start and end
             if (
                 (words[paragraph_start_word_index].text.strip()
-                == paragraph_text.split(" ")[0].strip())
-                and (words[paragraph_end_word_index - 1].text.strip()
-                == paragraph_text.split(" ")[-1].strip())
+                == paragraph_text.split(" ")[0].strip(" "))
+                and (words[paragraph_end_word_index - 1].text.strip(" ")
+                == paragraph_text.split(" ")[-1].strip(" "))
             ):
                 paragraph_words = words[
                     paragraph_start_word_index:paragraph_end_word_index
@@ -122,8 +122,8 @@ class DataProcessingService:
         paragraph_words: List[WordTranscriptionModel],
     ) -> VisualItemModel:
         """Prepare the visual model for use in the service."""
-        visual_start_words = visual_model.start_sentence.split()
-        visual_start_words = [word.strip()
+        visual_start_words = visual_model.start_sentence.split(" ")
+        visual_start_words = [word.strip(" ")
                               for word in visual_start_words]
         for index in range(len(paragraph_words) - len(visual_start_words) + 1):
             seq_words = [
@@ -137,6 +137,4 @@ class DataProcessingService:
                     start_time=paragraph_words[index].start,
                 )
                 return processed_visual_model
-        raise ValueError(
-            f"No matching sequence found for visual model start_sentence='{visual_model.start_sentence}'"
-        )
+        return None

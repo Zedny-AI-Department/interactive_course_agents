@@ -59,7 +59,7 @@ class GeneratedParagraphWithoutVisualModel(StrictBaseModel):
 
 
 class ParagraphWithVisualModel(GeneratedParagraphWithoutVisualModel):
-    visuals: GeneratedVisualItemModel = Field(
+    visuals: Optional[GeneratedVisualItemModel] = Field(
         description="The visuals of the paragraph"
     )
 

@@ -45,7 +45,6 @@ class DataProcessingService:
             user_message=ParagraphWithVisualPrompt.USER_PROMPT,
             script=srt_text,
         )
-        print(f"Prompt formatted successfully: {formatted_prompt}")
         generated_output_task = asyncio.create_task(
                 self.llm_service.ask_openai_llm(
                     output_schema=GeneratedParagraphWithVisualListModel,
@@ -57,19 +56,16 @@ class DataProcessingService:
         transcript_with_timestamps, generated_output = await asyncio.gather(
             transcript_task, generated_output_task
         )
-        print("Transcript with timestamps extracted successfully")
-        print(f"Generated paragraphs with metadata generated successfully")
         combined_result = self._combine_results(
             transcription_with_timestamps=transcript_with_timestamps, aligned_output=generated_output
         )
-        print(f"Combined results generated successfully: {combined_result}")
-        return combined_result
+        return ParagraphWithVisualListModel(paragraphs=combined_result)
 
     def _combine_results(
         self,
         transcription_with_timestamps: SegmentTranscriptionModelWithWords,
         aligned_output: GeneratedParagraphWithVisualListModel,
-    ) -> ParagraphWithVisualListModel:
+    ) -> List[ParagraphWithVisualModel]:
         """Combine the results from the transcript and aligned output."""
         paragraph_start_word_index = 0
         combined_result = []
@@ -80,24 +76,23 @@ class DataProcessingService:
             paragraph_end_word_index = len(paragraph_text.split())
 
             # Check paragraph words for matching start and end
-            print(words[paragraph_start_word_index].text, paragraph_text.split(" ")[0])
-            print(words[paragraph_end_word_index - 1].text, paragraph_text.split(" ")[-1])
             if (
                 (words[paragraph_start_word_index].text.strip()
                 == paragraph_text.split(" ")[0].strip())
                 and (words[paragraph_end_word_index - 1].text.strip()
                 == paragraph_text.split(" ")[-1].strip())
             ):
-                print("yes")
                 paragraph_words = words[
                     paragraph_start_word_index:paragraph_end_word_index
                 ]
 
             # Prepare visual time
             if paragraph.visuals is not None:
+                print(f"{paragraph.paragraph_index}: {paragraph.visuals}")
                 processed_visual_model = self._prepare_visual_data(
                     visual_model=paragraph.visuals, paragraph_words=words
                 )
+                print(f"proccessed: {processed_visual_model}")
             else:
                 processed_visual_model = None
 
@@ -106,7 +101,7 @@ class DataProcessingService:
                 paragraph_text=paragraph_text,
                 start_time=paragraph_words[0].start,
                 end_time=paragraph_words[-1].end,
-                visual_model=processed_visual_model,
+                visuals=processed_visual_model,
                 words=[
                     WordTimestampModel(**{
                         "word": word.text,
@@ -128,9 +123,11 @@ class DataProcessingService:
     ) -> VisualItemModel:
         """Prepare the visual model for use in the service."""
         visual_start_words = visual_model.start_sentence.split()
+        visual_start_words = [word.strip()
+                              for word in visual_start_words]
         for index in range(len(paragraph_words) - len(visual_start_words) + 1):
             seq_words = [
-                word.text
+                word.text.strip()
                 for word in paragraph_words[index : index + len(visual_start_words)]
             ]
             if visual_start_words == seq_words:
@@ -140,4 +137,6 @@ class DataProcessingService:
                     start_time=paragraph_words[index].start,
                 )
                 return processed_visual_model
-        return None
+        raise ValueError(
+            f"No matching sequence found for visual model start_sentence='{visual_model.start_sentence}'"
+        )

@@ -31,11 +31,9 @@ async def process_data(
         # Create pipeline
         service = build_pipeline()
         # Align paragraphs with audio
-        result = await service.process_srt_file(media_file=media_file, srt_file=srt_file) 
-        print("finished")
+        result = await service.process_srt_file(media_file=media_file, srt_file=srt_file)
         return result
     except Exception as e:
-        raise e
         raise HTTPException(
             status_code=500,
             detail=f"An error occurred while processing the request: {str(e)}",

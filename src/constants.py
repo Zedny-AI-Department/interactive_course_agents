@@ -22,7 +22,7 @@ class  ParagraphWithVisualPrompt:
             - If the content involves **comparisons, statistics, growth, distribution, or proportions** → suggest a **chart** (`bar`, `line`, `pie`, `radar`, `doughnut`).  
             - If the content involves **structured information (steps, categories, facts, pros/cons, comparisons)** → suggest a **table**.  
             - If a concept is best represented by **a diagram, flow, or image** → search on internet websites and suggest an **image** with `src`, `alt`, and `title`.  
-            - Ensure **most of paragraphs is with a visual** to maximize engagement.  
+            - Ensure **most of paragraphs is with a visuals** to maximize engagement, not accepted that whole paragraphs without visuals.  
 
             5. **Ensure anchoring attention with VAK:**  
             - **Visual** → OST keywords + charts/tables/images  

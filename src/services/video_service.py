@@ -13,7 +13,6 @@ class VideoProcessingService:
     async def extract_transcript_with_timestamps(self, video_file: UploadFile) -> SegmentTranscriptionModelWithWords:
         """Extract the transcript of the video with timestamps."""
         file_bytes = await video_file.read()
-        print(f"video_type: {video_file.content_type}")
         timeout = httpx.Timeout(500.0, connect=10.0)  # 60s write/read, 10s connect
 
         try:

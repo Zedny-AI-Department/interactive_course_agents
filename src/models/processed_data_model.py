@@ -57,8 +57,9 @@ class ParagraphWithoutVisualModel(BaseModel):
 
 
 class ParagraphWithVisualModel(ParagraphWithoutVisualModel):
-    visuals: Optional[VisualItemModel] = []
+    visuals: VisualItemModel
 
 
 class ParagraphWithVisualListModel(BaseModel):
     paragraphs: List[ParagraphWithVisualModel] = []
+

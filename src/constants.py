@@ -23,9 +23,11 @@ class  ParagraphWithVisualPrompt:
             - If the content involves **structured information (steps, categories, facts, pros/cons, comparisons)** → suggest a **table**.  
             - If a concept is best represented by **a diagram, flow, or image** → search on internet websites and suggest an **image** with `src`, `alt`, and `title`. 
             - The start sentence of paragraph should be an exact part of the paragraph, and should be just 2 or 3 words not complete sentence.  
-            - Ensure **most of paragraphs is with a visuals** to maximize engagement, not accepted that whole paragraphs without visuals.
+            - Ensure **all of paragraphs except first one is with a visuals** to maximize engagement, not accepted that whole paragraphs without visuals.
+            - Ensure the the url of image is a direct url for the image not for website. 
             - Ensure that not all paragraphs have same type of visual, it is better to be different like: once image, another pie chart, another bar chart, another table and so on 
-
+            - Ensure to return correct "type" field inside "content" field for visuals, and type must be on of ("chart", "image", "table) only.
+            - for chart data ensure type of chart be on of (bar / line / pie / radar / doughnut) on;ly.
             5. **Ensure anchoring attention with VAK:**  
             - **Visual** → OST keywords + charts/tables/images  
             - **Auditory** → Transcript text (spoken words)  

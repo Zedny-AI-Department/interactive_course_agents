@@ -53,6 +53,7 @@ class LLMService:
         tools = [search]
         agent_executor = create_react_agent(model=model, tools=tools)
         response = agent_executor.invoke({"messages": [prompt]})
+        print(f"response: {response}")
         if output_schema:
             agent_output = response["messages"][-1].content
             structured_agent_response = await self._structure_agent_response(agent_output=agent_output, output_schema=output_schema)
@@ -73,8 +74,8 @@ class LLMService:
 
             Make sure to include:
             1. A clear answer to the user's question
-            2. All sources used with their titles, content, and URLs
-            3. Your reasoning process
+            2. Ensure all schema fields is mapped correctly
+            3. for each paragraph words, if there is missed-words or wrong words in list of paragraph words, try to correct it based on its place on paragraph but be precise.
 
             Response:
             """,

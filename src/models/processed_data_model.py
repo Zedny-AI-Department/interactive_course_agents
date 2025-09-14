@@ -16,13 +16,13 @@ class WordTimestampModel(BaseModel):
 class TableDataModel(BaseModel):
     type: Literal["table"] = Field(default="table")
     headers: List[str]
-    data: List[List[str]]
+    data: List[List[str|int]]
     title: str
     caption: Optional[str] = None
 
 
 class ChartDataDetailsModel(BaseModel):
-    labels: List[str] = Field(
+    labels: List[str|int] = Field(
         description="Labels of the chart",
     )
     datasets: List[float] = Field(

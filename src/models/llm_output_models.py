@@ -14,13 +14,13 @@ class KeywordItemModel(StrictBaseModel):
 class TableDataModel(StrictBaseModel):
     type: Literal["table"] = Field(default="table")
     headers: List[str] = Field(description="The headers of the table")
-    data: List[List[str]] = Field(description="The data of the table")
+    data: List[List[str|int]] = Field(description="The data of the table")
     title: str = Field(description="The title of the table")
     caption: Optional[str] = Field(default=None, description="The caption of the table")
 
 
 class ChartDataDetailsModel(StrictBaseModel):
-    labels: List[str] = Field(
+    labels: List[str|int] = Field(
         description="Labels of the chart",
     )
     datasets: List[float] = Field(

@@ -49,6 +49,7 @@ class DataProcessingService:
                 output_schema=GeneratedParagraphWithVisualListModel,
                 prompt=formatted_prompt,
             )
+        print(f"generated_output: {generated_output}")
         # Align generated paragraphs with video and extract word timestamps
         paragraphs = [ParagraphItem(text=paragraph.paragraph_text, paragraph_index=paragraph.paragraph_index) for paragraph in generated_output.paragraphs]
         video_paragraph_alignment_result = await self.video_service.align_paragraph_with_media(media_file=media_file, paragraphs=paragraphs)
@@ -74,12 +75,15 @@ class DataProcessingService:
             
             # Prepare visual data
             if paragraph.visuals is not None:
+                print(f"{paragraph.paragraph_index}: {paragraph.visuals.model_dump()}")
                 processed_visual_model = self._prepare_visual_data(
                     visual_model=paragraph.visuals, paragraph_words=aligned_paragraph.paragraph_words
                 )
+            else:
+                processed_visual_model = None
 
             processed_paragraph = ParagraphWithVisualModel(
-                paragraph_id=paragraph.paragraph_index,
+                paragraph_id=paragraph.paragraph_index + 1,
                 paragraph_text=paragraph.paragraph_text,
                 start_time=aligned_paragraph.start,
                 end_time=aligned_paragraph.end,

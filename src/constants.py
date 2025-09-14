@@ -3,38 +3,55 @@ class  ParagraphWithVisualPrompt:
             You will receive a **script text**, 
             ## Your Task
 
-            1. **Divide full text to small paragraphs each paragraph about 2 or 3 lines **  
-            - Group related ideas naturally.  
-            - Ensure smooth readability (no abrupt breaks).  
+           1. **Paragraph Division**
+                - Divide the full text into small paragraphs, each paragraph about 2–3 lines.  
+                - Group related ideas naturally.  
+                - Ensure smooth readability (no abrupt breaks).  
 
-            1. **For each paragraph, create a structured  **object** following the structured output schema.  
+            2. **Structured Output**
+                - For each paragraph, create a structured **object** following the schema at the end of this prompt.  
+                - Each paragraph object MUST include: paragraph_index, paragraph_text, keywords, and exactly one visual.  
 
-            2. **Extract Keywords & On-Screen Text (OST):**  
-            - Identify **main keywords, numbers, names, dates, callouts, and warnings**.  
-            - Classify each keyword with the `type` field:  
+
+            3. **Keywords & OST Extraction**
+                - Extract keywords, numbers, names, dates, callouts, and warnings.  
+                - Classify each keyword with the `type` field:  
                 - `main` → central concept of the paragraph  
                 - `Key Terms` → technical terms, definitions, subject-specific words  
-                - `Callouts` → items that should be emphasized (tips, notes, attention grabbers)  
-                - `Warnings` → cautionary messages, risks, critical points  
-            - Extracted keywords should be an exact part of the paragraph, and should be just 2 or 3 words not complete sentence.
-            - Ensure **each paragraph has at least one keyword**.
+                - `Callouts` → emphasized items (tips, notes, highlights)  
+                - `Warnings` → cautionary points, risks, critical issues  
+                - Keywords MUST be exact parts of the paragraph text, only 2–3 words (not full sentences).  
+                - Every paragraph MUST have at least one keyword.  
 
-            4. **Suggest visuals (VAK model integration):**  
-            - If the content involves **comparisons, statistics, growth, distribution, or proportions** → suggest a **chart** (`bar`, `line`, `pie`, `radar`, `doughnut`).  
-            - If the content involves **structured information (steps, categories, facts, pros/cons, comparisons)** → suggest a **table**.  
-            - If a concept is best represented by **a diagram, flow, or image** → search on internet websites and suggest an **image** with `src`, `alt`, and `title`. 
-            - The start sentence of paragraph should be an exact part of the paragraph, and should be just 2 or 3 words not complete sentence.  
-            - Ensure **all paragraphs have with a visuals** to maximize engagement, not accepted any paragraphs without visuals.
-            - Ensure the the url of image is a direct url for the image not for website. 
-            - Ensure that not all paragraphs have same type of visual, it is better to be different like: once image, another pie chart, another bar chart, another table and so on and ensure that the most of visuals is charts and tables.
-            - Ensure to return correct "type" field inside "content" field for visuals, and type must be on of ("chart", "image", "table) only.
-            - for chart data ensure type of chart be on of (bar / line / pie / radar / doughnut) only.
+            4. **Visuals (VAK Model Integration)**
+                - Every paragraph MUST have **exactly one visual** (mandatory).  
+                - Visual type MUST be one of: `"chart"`, `"table"`, `"image"`.  
+                - start_sentence field
+                - Rules for charts:  
+                    - Chart type MUST be one of: `"bar"`, `"line"`, `"pie"`, `"radar"`, `"doughnut"`. 
+                    - dataset MUST be list of float. 
+                    - Provide mock chart data relevant to the paragraph text.  
+                - Rules for tables:  
+                    - Use when content is structured (steps, categories, facts, pros/cons, comparisons).  
+                    - Provide mock rows/columns relevant to the paragraph text.  
+                - Rules for images:  
+                    - Provide `src`, `alt`, and `title`.  
+                    - `src` MUST be a direct image URL (not a website link).  
+                - At least 60% of visuals across all paragraphs MUST be charts or tables.  
 
-            5. **Ensure anchoring attention with VAK:**  
-            - **Visual** → OST keywords + charts/tables/images (must be provided for each paragraph) 
-            - **Auditory** → Transcript text (spoken words)  
-            - **Kinesthetic** → Highlight actions, processes, or instructions that engage the learner  
 
-            the output must be in this schema: {output_schema}
+            ## Validation Rules (MANDATORY)
+                1. Every paragraph object MUST include a `visual`.  
+                2. The `visual.type` MUST be exactly one of: `"chart"`, `"table"`, `"image"`.  
+                3. At least 60% of visuals MUST be `"chart"` or `"table"`.  
+                4. Every paragraph MUST have at least one keyword.  
+                5. Output MUST strictly follow the schema below. No extra text, no explanations.  
+
+                If any rule is broken, REJECT the output and regenerate until all rules are satisfied.  
+
+
+            ## Output Schema:
+                The output MUST strictly follow this schema only:
+                {output_schema}
             """
     USER_PROMPT = "script text: {script}"

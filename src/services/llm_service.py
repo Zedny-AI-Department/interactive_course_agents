@@ -53,7 +53,6 @@ class LLMService:
         tools = [search]
         agent_executor = create_react_agent(model=model, tools=tools)
         response = agent_executor.invoke({"messages": [prompt]})
-        print(f'Agent output: {response["messages"][-1].content}')
         if output_schema:
             agent_output = response["messages"][-1].content
             structured_agent_response = await self._structure_agent_response(agent_output=agent_output, output_schema=output_schema)

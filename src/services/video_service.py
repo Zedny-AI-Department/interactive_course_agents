@@ -26,8 +26,7 @@ class VideoProcessingService:
                 return SegmentTranscriptionModelWithWords(**(response.json()))
         except httpx.HTTPStatusError as e:
             error_text = e.response.text
-            print("Error response body:", error_text)
-            raise
+            raise e
 
     async def align_paragraph_with_media(self, media_file: UploadFile, paragraphs: List[ParagraphItem]) -> ParagraphsAlignmentWithVideoResponse:
         """Extract the transcript of the video with timestamps."""
@@ -50,6 +49,5 @@ class VideoProcessingService:
                 return ParagraphsAlignmentWithVideoResponse(**(response.json()))
         except httpx.HTTPStatusError as e:
             error_text = e.response.text
-            print("Error response body:", error_text)
-            raise
+            raise e
 

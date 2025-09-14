@@ -36,7 +36,6 @@ class DataProcessingService:
         """Process the SRT file and media file to produce aligned output."""
         # Extract text from SRT file
         srt_text = await self.srt_service.extract_text(srt_file=srt_file)
-        print("srt processed successfully")
         # Generate paragraphs with metadata using LLM service
         formatted_prompt = self.llm_service.format_prompt(
             system_message=ParagraphWithVisualPrompt.SYSTEM_PROMPT,
@@ -44,18 +43,15 @@ class DataProcessingService:
             script=srt_text,
             output_schema=GeneratedParagraphWithVisualListModel.model_json_schema()
         )
-        print(f'schema: {GeneratedParagraphWithVisualListModel.model_json_schema()}')
         generated_output: GeneratedParagraphWithVisualListModel = await self.llm_service.ask_search_agent(
                 model_name="gpt-4o-mini",
                 model_provider="openai",
                 output_schema=GeneratedParagraphWithVisualListModel,
                 prompt=formatted_prompt,
             )
-        print(f"data generated successfully: {generated_output}")
         # Align generated paragraphs with video and extract word timestamps
         paragraphs = [ParagraphItem(text=paragraph.paragraph_text, paragraph_index=paragraph.paragraph_index) for paragraph in generated_output.paragraphs]
         video_paragraph_alignment_result = await self.video_service.align_paragraph_with_media(media_file=media_file, paragraphs=paragraphs)
-        print(f"paragraphs aligned successfully: {video_paragraph_alignment_result}")
         combined_result = self._combine_results(
             video_paragraph_alignment_result=video_paragraph_alignment_result,
             generated_output=generated_output,
@@ -78,11 +74,9 @@ class DataProcessingService:
             
             # Prepare visual data
             if paragraph.visuals is not None:
-                print(f"{paragraph.paragraph_index}: {paragraph.visuals}")
                 processed_visual_model = self._prepare_visual_data(
                     visual_model=paragraph.visuals, paragraph_words=aligned_paragraph.paragraph_words
                 )
-                print(f"processed: {processed_visual_model}")
 
             processed_paragraph = ParagraphWithVisualModel(
                 paragraph_id=paragraph.paragraph_index,
@@ -111,8 +105,6 @@ class DataProcessingService:
                 self._clean_text(word.text).strip()
                 for word in paragraph_words[index : index + len(visual_start_words)]
             ]
-            print(seq_words)
-            print(visual_start_words)
             if visual_start_words == seq_words:
                 processed_visual_model = VisualItemModel(
                     type=visual_model.type,

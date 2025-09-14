@@ -1,5 +1,5 @@
 from typing import Annotated, List, Literal, Optional, Union
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class StrictBaseModel(BaseModel):
@@ -34,6 +34,13 @@ class ChartDataModel(StrictBaseModel):
     )
     data: ChartDataDetailsModel = Field(description="The data of the chart")
     title: str = Field(description="The title of the chart")
+    
+    @field_validator("chart_type", mode="before")
+    def force_line_if_invalid(cls, v):
+        allowed = {"bar", "line", "pie", "radar", "doughnut"}
+        if v not in allowed:
+            return "line"
+        return v
 
 
 class ImageModel(StrictBaseModel):

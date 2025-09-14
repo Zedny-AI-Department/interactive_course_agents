@@ -44,7 +44,7 @@ class DataProcessingService:
             output_schema=GeneratedParagraphWithVisualListModel.model_json_schema()
         )
         generated_output: GeneratedParagraphWithVisualListModel = await self.llm_service.ask_search_agent(
-                model_name="gpt-4o-mini",
+                model_name="gpt-4o",
                 model_provider="openai",
                 output_schema=GeneratedParagraphWithVisualListModel,
                 prompt=formatted_prompt,

@@ -1,3 +1,4 @@
+import json
 from typing import List
 from fastapi import UploadFile
 import httpx
@@ -41,9 +42,9 @@ class VideoProcessingService:
                 paragraphs = [paragraph.model_dump() for paragraph in paragraphs]
                 paragraphs_json = {"paragraphs": paragraphs}
                 data = {
-                        "paragraphs_data": str(paragraphs_json)
+                        "paragraphs_data": json.dumps(paragraphs_json)
                     }
-                headers = {"accept": "application/json", "Content-Type": "multipart/form-data"}
+                headers = {"accept": "application/json"}
                 response = await client.post(url=self.alignment_api, headers=headers, files=files, data=data)
                 response.raise_for_status()
                 return ParagraphsAlignmentWithVideoResponse(**(response.json()))

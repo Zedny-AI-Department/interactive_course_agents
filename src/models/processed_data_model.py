@@ -14,7 +14,7 @@ class WordTimestampModel(BaseModel):
 
 
 class TableDataModel(BaseModel):
-    type: Literal["table"]
+    type: Literal["table"] = Field(default="table")
     headers: List[str]
     data: List[List[str]]
     title: str
@@ -31,14 +31,14 @@ class ChartDataDetailsModel(BaseModel):
 
 
 class ChartDataModel(BaseModel):
-    type: Literal["chart"]
+    type: Literal["chart"] = Field(default="chart")
     chart_type: Literal["bar", "line", "pie", "radar", "doughnut"]
     data: ChartDataDetailsModel
     title: str
 
 
 class ImageModel(BaseModel):
-    type: Literal["image"]
+    type: Literal["image"] = Field(default="image")
     url: str
     title: str
     alt_text: Optional[str] = None

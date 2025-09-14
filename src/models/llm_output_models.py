@@ -12,7 +12,7 @@ class KeywordItemModel(StrictBaseModel):
 
 
 class TableDataModel(StrictBaseModel):
-    type: Literal["table"]
+    type: Literal["table"] = Field(default="table")
     headers: List[str] = Field(description="The headers of the table")
     data: List[List[str]] = Field(description="The data of the table")
     title: str = Field(description="The title of the table")
@@ -28,7 +28,7 @@ class ChartDataDetailsModel(StrictBaseModel):
     )
 
 class ChartDataModel(StrictBaseModel):
-    type: Literal["chart"]
+    type: Literal["chart"] = Field(default="chart")
     chart_type: Literal["bar", "line", "pie", "radar", "doughnut"] = Field(
         description="The type of the chart"
     )
@@ -37,7 +37,7 @@ class ChartDataModel(StrictBaseModel):
 
 
 class ImageModel(StrictBaseModel):
-    type: Literal["image"]
+    type: Literal["image"] = Field(default="image")
     url: str = Field(description="The url of the image")
     title: str = Field(description="The title of the image")
     alt_text: Optional[str] = Field(

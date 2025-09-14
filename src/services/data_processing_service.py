@@ -42,8 +42,12 @@ class DataProcessingService:
             system_message=ParagraphWithVisualPrompt.SYSTEM_PROMPT,
             user_message=ParagraphWithVisualPrompt.USER_PROMPT,
             script=srt_text,
+            output_schema=GeneratedParagraphWithVisualListModel.model_json_schema()
         )
-        generated_output: GeneratedParagraphWithVisualListModel = await self.llm_service.ask_openai_llm(
+        print(f'schema: {GeneratedParagraphWithVisualListModel.model_json_schema()}')
+        generated_output: GeneratedParagraphWithVisualListModel = await self.llm_service.ask_search_agent(
+                model_name="gpt-4o-mini",
+                model_provider="openai",
                 output_schema=GeneratedParagraphWithVisualListModel,
                 prompt=formatted_prompt,
             )
@@ -53,8 +57,8 @@ class DataProcessingService:
         video_paragraph_alignment_result = await self.video_service.align_paragraph_with_media(media_file=media_file, paragraphs=paragraphs)
         print(f"paragraphs aligned successfully: {video_paragraph_alignment_result}")
         combined_result = self._combine_results(
-            video_paragraph_alignment=video_paragraph_alignment_result,
-            aligned_output=generated_output,
+            video_paragraph_alignment_result=video_paragraph_alignment_result,
+            generated_output=generated_output,
         )
         return ParagraphWithVisualListModel(paragraphs=combined_result)
 
@@ -85,9 +89,11 @@ class DataProcessingService:
                 paragraph_text=paragraph.paragraph_text,
                 start_time=aligned_paragraph.start,
                 end_time=aligned_paragraph.end,
-                keywords=paragraph.keywords,
-                words=aligned_paragraph.paragraph_words,
-                visuals=processed_visual_model if processed_visual_model else None
+                keywords=[keyword.model_dump() for keyword in paragraph.keywords],
+                words=[{"word":word.text,
+                        "start":word.start,
+                        "end": word.end} for word in aligned_paragraph.paragraph_words],
+                visuals=processed_visual_model.model_dump() if processed_visual_model else None
             )
             combined_result.append(processed_paragraph)
         return combined_result

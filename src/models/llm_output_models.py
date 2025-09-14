@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Union
+from typing import Annotated, List, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -12,6 +12,7 @@ class KeywordItemModel(StrictBaseModel):
 
 
 class TableDataModel(StrictBaseModel):
+    type: Literal["table"]
     headers: List[str] = Field(description="The headers of the table")
     data: List[List[str]] = Field(description="The data of the table")
     title: str = Field(description="The title of the table")
@@ -27,7 +28,8 @@ class ChartDataDetailsModel(StrictBaseModel):
     )
 
 class ChartDataModel(StrictBaseModel):
-    type: Literal["bar", "line", "pie", "radar", "doughnut"] = Field(
+    type: Literal["chart"]
+    chart_type: Literal["bar", "line", "pie", "radar", "doughnut"] = Field(
         description="The type of the chart"
     )
     data: ChartDataDetailsModel = Field(description="The data of the chart")
@@ -35,6 +37,7 @@ class ChartDataModel(StrictBaseModel):
 
 
 class ImageModel(StrictBaseModel):
+    type: Literal["image"]
     url: str = Field(description="The url of the image")
     title: str = Field(description="The title of the image")
     alt_text: Optional[str] = Field(

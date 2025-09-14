@@ -1,5 +1,5 @@
-from typing import List, Literal, Optional, Union
-from pydantic import BaseModel, Field
+from typing import Annotated, List, Literal, Optional, Union
+from pydantic import BaseModel, Field, field_validator
 
 
 class KeywordItemModel(BaseModel):
@@ -14,6 +14,7 @@ class WordTimestampModel(BaseModel):
 
 
 class TableDataModel(BaseModel):
+    type: Literal["table"]
     headers: List[str]
     data: List[List[str]]
     title: str
@@ -30,12 +31,14 @@ class ChartDataDetailsModel(BaseModel):
 
 
 class ChartDataModel(BaseModel):
-    type: Literal["bar", "line", "pie", "radar", "doughnut"]
+    type: Literal["chart"]
+    chart_type: Literal["bar", "line", "pie", "radar", "doughnut"]
     data: ChartDataDetailsModel
     title: str
 
 
 class ImageModel(BaseModel):
+    type: Literal["image"]
     url: str
     title: str
     alt_text: Optional[str] = None
@@ -43,7 +46,10 @@ class ImageModel(BaseModel):
 
 class VisualItemModel(BaseModel):
     type: Literal["chart", "image", "table"]
-    content: Union[ChartDataModel, ImageModel, TableDataModel]
+    content: Annotated[
+    Union[ChartDataModel, ImageModel, TableDataModel],
+        Field(discriminator="type")
+    ]
     start_time: float
 
 

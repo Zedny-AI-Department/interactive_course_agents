@@ -27,6 +27,12 @@ class ChartDataDetailsModel(StrictBaseModel):
         description="Datasets of the chart",
     )
 
+    @field_validator("datasets", mode="before")
+    def flatten_xy_to_y(cls, v: List):
+        if any(isinstance(item, list) for item in v):
+            return [item[-1] if isinstance(item, list) else item for item in v]
+        return v
+
 class ChartDataModel(StrictBaseModel):
     type: Literal["chart"] = Field(default="chart")
     chart_type: Literal["bar", "line", "pie", "radar", "doughnut"] = Field(
@@ -41,7 +47,7 @@ class ChartDataModel(StrictBaseModel):
         if v not in allowed:
             return "line"
         return v
-
+    
 
 class ImageModel(StrictBaseModel):
     type: Literal["image"] = Field(default="image")

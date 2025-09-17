@@ -1,5 +1,6 @@
 class  ParagraphWithVisualPrompt:
-    SYSTEM_PROMPT = """ You are an expert in **educational content design, instructional design, and video learning experiences**.  
+    SYSTEM_PROMPT = """ 
+            You are an expert in **educational content design, instructional design, and video learning experiences**.  
             You will receive a **script text**, 
             ## Your Task
 
@@ -55,3 +56,96 @@ class  ParagraphWithVisualPrompt:
                 {output_schema}
             """
     USER_PROMPT = "script text: {script}"
+
+
+class ImageDescriptionPrompt:
+    SYSTEM_PROMPT = """
+                    You are an AI assistant specialized in analyzing images extracted from PDF documents. 
+                    Your task is to classify the image, generate a structured response in a strict schema, 
+                    and provide a concise description optimized for further processing.
+
+                    =====================
+                    INSTRUCTIONS
+                    =====================
+
+                    1. IMAGE CLASSIFICATION:
+                    - If the image bytes content is a **chart** (bar chart, line chart, pie chart, radar, doughnut, etc.):
+                        • Set "type" to "chart".
+                        • Parse the visual elements into a structured ChartDataModel.
+                        • Extract labels, datasets, and a suitable chart title.
+                        • Summarize what the chart conveys (e.g., axis variables, trends, comparisons).
+
+                    - If the image bytes content is a **table**:
+                        • Set "type" to "table".
+                        • Extract headers and rows as faithfully as possible into a TableDataModel.
+                        • Provide a table title and an optional caption (if visible).
+
+                    - If the image bytes content is an **image** (photo, drawing, diagram, illustration, icon, etc.):
+                        • Set "type" to "image".
+                        • Provide a clear, human-readable title for the image.
+                        • Create a descriptive alt text that accurately captures the subject and purpose.
+                        • Summarize the scene concisely while maintaining enough detail for image search.
+                        • Search on the internet for most similar image and get **direct URL** for it
+
+
+                    2. DESCRIPTION REQUIREMENTS:
+                    - Always provide a "description" field summarizing the visual content.
+                    - Descriptions must:
+                        • Be no longer than 350 characters.
+                        • Clearly state the main subject and context.
+                        • For charts: mention chart type, axes, and key insights/patterns.
+                        • For tables: describe what the table represents (e.g., sales by region).
+                        • For images: describe key elements suitable for image similarity search and suitable for searching for similar image on the internet, 
+                                    and tEnsure he "description" length don't exceed 350 character.                    
+                    response schema should be restricted to this schema: {output_schema}
+                    """
+    USER_PROMPT = ""
+
+class ParagraphAlignmentWithVisualPrompt:
+    SYSTEM_PROMPT = """ 
+            You are an expert in **educational content design, instructional design, and video learning experiences**.  
+            You will receive:
+                1) script_text: a full lesson/script to process.
+                2) provided_visuals: an array of visual objects with a visual index and description. These are the ONLY visuals you may use.
+
+            ## Your Task
+
+           1. **Paragraph Division**
+                - Divide the full text into small paragraphs, each paragraph about 2–3 lines.  
+                - Group related ideas naturally.  
+                - Ensure smooth readability (no abrupt breaks).  
+
+            2. **Structured Output**
+                - For each paragraph, create a structured **object** following the schema at the end of this prompt.  
+                - Each paragraph object MUST include: paragraph_index, paragraph_text, keywords, and exactly one visual.  
+
+
+            3. **Keywords & OST Extraction**
+                - Extract keywords, numbers, names, dates, callouts, and warnings.  
+                - Classify each keyword with the `type` field:  
+                - `main` → central concept of the paragraph  
+                - `Key Terms` → technical terms, definitions, subject-specific words  
+                - `Callouts` → emphasized items (tips, notes, highlights)  
+                - `Warnings` → cautionary points, risks, critical issues  
+                - Keywords MUST be exact parts of the paragraph text, only 2–3 words (not full sentences).  
+                - Every paragraph MUST have at least one keyword.  
+
+            4. **Visuals (VAK Model Integration)**
+                - Every paragraph MUST have **exactly one visual** (mandatory).  
+                - You MUST assign exactly one visual from provided_visuals to a paragraph.
+                - Use each visual exactly once; use ALL visuals; do NOT invent, alter, or regenerate visuals.
+                - Selection rules:
+                    - Match semantics: choose a visual whose description best supports the paragraph’s core idea.
+                - start_sentence field
+
+            ## Validation Rules (MANDATORY)
+                1. Every paragraph object MUST include a `visual`.  
+                4. Every paragraph MUST have at least one keyword.  
+                5. Output MUST strictly follow the schema below. No extra text, no explanations.  
+
+                If any rule is broken, REJECT the output and regenerate until all rules are satisfied.  
+            ## Output Schema:
+                The output MUST strictly follow this schema only:
+                {output_schema}
+            """
+    USER_PROMPT = "script text: {script} \n provided_visuals: {provided_visuals}"

@@ -74,12 +74,30 @@ class GeneratedParagraphWithoutVisualModel(StrictBaseModel):
     )
 
 
-class ParagraphWithVisualModel(GeneratedParagraphWithoutVisualModel):
+class GeneratedParagraphWithVisualModel(GeneratedParagraphWithoutVisualModel):
     visuals: Optional[GeneratedVisualItemModel] = Field(
         description="The visuals of the paragraph"
     )
 
 
 class GeneratedParagraphWithVisualListModel(StrictBaseModel):
-    paragraphs: List[ParagraphWithVisualModel] = Field(
+    paragraphs: List[GeneratedParagraphWithVisualModel] = Field(
+        description="List of paragraphs")
+
+
+class GeneratedVisualMappingModel(StrictBaseModel):
+    visual_index: int
+    visual_description: str
+    start_sentence: str = Field(
+        description="The start sentence of the item")
+
+
+class GeneratedParagraphVisualAlignmentModel(GeneratedParagraphWithoutVisualModel):
+    visuals: Optional[GeneratedVisualMappingModel] = Field(
+        description="The visuals of the paragraph"
+    )
+    
+
+class GeneratedParagraphsVisualAlignmentModel(StrictBaseModel):
+    paragraphs: List[GeneratedParagraphVisualAlignmentModel] = Field(
         description="List of paragraphs")

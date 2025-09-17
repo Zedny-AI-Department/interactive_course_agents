@@ -66,9 +66,9 @@ class BackgroundProcessor:
                 media_upload = UploadFile(
                     filename=media_filename,
                     file=open(media_temp.name, 'rb'),
-                    content_type=media_content_type
+                    # content_type = str(media_content_type)
                 )
-                
+
                 try:
                     # Update progress - starting processing
                     await task_manager.update_task_status(

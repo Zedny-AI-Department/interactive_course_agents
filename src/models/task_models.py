@@ -34,6 +34,7 @@ class TaskData(BaseModel):
 
 class TaskResponse(BaseModel):
     task_id: str
+    user_id: str
     status: TaskStatus
     stage: TaskStage
     progress: int

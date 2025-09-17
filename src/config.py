@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     TRANSCRIPTION_API_URL: str = Field(alias='TRANSCRIPTION_API_URL')
     OPENAI_API_KEY: str = Field(alias="OPENAI_API_KEY")
     TAVILY_API_KEY: str = Field(alias="TAVILY_API_KEY")
+    REDIS_URL: str = Field(default="redis://localhost:6379", alias="REDIS_URL")
+    MAX_CONCURRENT_TASKS_PER_USER: int = Field(default=5, alias="MAX_CONCURRENT_TASKS_PER_USER")
+    MAX_GLOBAL_CONCURRENT_TASKS: int = Field(default=20, alias="MAX_GLOBAL_CONCURRENT_TASKS")
 
 
     model_config = SettingsConfigDict(env_file=".env")  

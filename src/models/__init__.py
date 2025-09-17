@@ -1,6 +1,7 @@
 from .transcription_output_model import SegmentTranscriptionModelWithWords, WordTranscriptionModel, ParagraphItem, ParagraphsAlignmentWithVideoResponse
 from .llm_output_models import GeneratedParagraphWithVisualListModel, GeneratedVisualItemModel
 from .processed_data_model import ParagraphWithVisualListModel, ParagraphWithVisualModel, VisualItemModel, WordTimestampModel
+from .task_models import TaskStatus, TaskStage, TaskData, TaskResponse, CreateTaskResponse, UserTasksResponse
 
 __all__ = [
     "SegmentTranscriptionModelWithWords",
@@ -12,5 +13,11 @@ __all__ = [
     "WordTimestampModel",
     "WordTranscriptionModel",
     "ParagraphItem",
-    "ParagraphsAlignmentWithVideoResponse"
+    "ParagraphsAlignmentWithVideoResponse",
+    "TaskStatus",
+    "TaskStage", 
+    "TaskData",
+    "TaskResponse",
+    "CreateTaskResponse",
+    "UserTasksResponse"
 ]

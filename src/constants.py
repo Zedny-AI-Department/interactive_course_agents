@@ -1,4 +1,4 @@
-class  ParagraphWithVisualPrompt:
+class ParagraphWithVisualPrompt:
     SYSTEM_PROMPT = """ 
             You are an expert in **educational content design, instructional design, and video learning experiences**.  
             You will receive a **script text**, 
@@ -35,9 +35,10 @@ class  ParagraphWithVisualPrompt:
                 - Rules for tables:  
                     - Use when content is structured (steps, categories, facts, pros/cons, comparisons).  
                     - Provide mock rows/columns relevant to the paragraph text.  
-                - Rules for images:  
+                - Rules for images: 
+                    - Search for related image on internet 
                     - Provide `src`, `alt`, and `title`.  
-                    - `src` MUST be a direct image URL (not a website link).  
+                    - `src` MUST be a direct image URL (not a website link). 
                 - At least 60% of visuals across all paragraphs MUST be charts or tables.  
 
 
@@ -100,6 +101,7 @@ class ImageDescriptionPrompt:
                     response schema should be restricted to this schema: {output_schema}
                     """
     USER_PROMPT = ""
+
 
 class ParagraphAlignmentWithVisualPrompt:
     SYSTEM_PROMPT = """ 

@@ -1,7 +1,7 @@
 import fitz
 from typing import List
 
-from src.models.image_extraction_models import ExtractedImageModel
+from src.models import ExtractedImage
 
 
 class FileProcessingService:
@@ -10,10 +10,10 @@ class FileProcessingService:
     def __init__(self):
         pass
 
-    def extract_images_from_pdf(self, pdf_bytes: bytes) -> List[ExtractedImageModel]:
+    def extract_images_from_pdf(self, pdf_bytes: bytes) -> List[ExtractedImage]:
         """
         Extract images from a PDF given as bytes.
-        Returns a list of ExtractedImageModel: { 'image_bytes', 'filename', 'extension' }
+        Returns a list of ExtractedImage with image data and metadata.
         """
         images_list = []
 
@@ -29,13 +29,13 @@ class FileProcessingService:
                 base_image = pdf_doc.extract_image(xref)
                 image_bytes = base_image["image"]
                 image_ext = base_image["ext"]
-                images_list.append(ExtractedImageModel(
-                                    img_index=image_index,
-                                   img_bytes=image_bytes,
-                                   img_extension=image_ext
-                )
+                images_list.append(
+                    ExtractedImage(
+                        image_index=image_index,
+                        image_bytes=image_bytes,
+                        file_extension=image_ext,
+                    )
                 )
                 image_index += 1
         pdf_doc.close()
         return images_list
-    

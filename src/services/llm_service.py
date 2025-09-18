@@ -57,7 +57,13 @@ class LLMService:
         response = structured_llm.invoke(prompt, **kwargs)
         return response
 
-    def format_prompt(self, system_message: str, user_message: str, additional_content:Optional[List[Dict]] = None, **kwargs) -> str:
+    def format_prompt(
+        self,
+        system_message: str,
+        user_message: str,
+        additional_content: Optional[List[Dict]] = None,
+        **kwargs,
+    ) -> str:
         """Format the prompt with system and user messages."""
         system_prompt = SystemMessagePromptTemplate.from_template(system_message)
         user_prompt = HumanMessagePromptTemplate.from_template(user_message)
@@ -84,7 +90,7 @@ class LLMService:
         search = TavilySearch(max_results=2)
         tools = [search]
         agent_executor = create_react_agent(model=model, tools=tools)
-        response = agent_executor.invoke({"messages": [prompt]})
+        response = agent_executor.invoke({"messages": prompt})
         if output_schema:
             agent_output = response["messages"][-1].content
             structured_agent_response = await self._structure_agent_response(

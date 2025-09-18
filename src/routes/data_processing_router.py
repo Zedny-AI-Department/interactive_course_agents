@@ -1,25 +1,29 @@
 from fastapi import APIRouter, File, Query, UploadFile, HTTPException
 
 from src.container import get_data_processing_service
-from src.models import ParagraphWithVisualListModel
-from src.services import DataProcessingService, VideoService, LLMService, SRTService
+from src.models import EducationalContent
+
 
 data_processing_router = APIRouter()
 
 
 # Endpoints
 
-@data_processing_router.post("/process/srt_media/",
-                             response_model=ParagraphWithVisualListModel)
-async def process_data(
-    srt_file: UploadFile = File(...),
-    media_file: UploadFile = File(...),
+
+@data_processing_router.post(
+    "/educational-content/generate", response_model=EducationalContent
+)
+async def generate_educational_content(
+    srt_file: UploadFile = File(..., description="SRT subtitle file"),
+    media_file: UploadFile = File(..., description="Video or audio media file"),
 ):
     try:
         # Create pipeline
         service = get_data_processing_service()
         # Align paragraphs with audio
-        result = await service.run_generation_agent(media_file=media_file, srt_file=srt_file)
+        result = await service.generate_paragraphs_with_visuals(
+            media_file=media_file, srt_file=srt_file
+        )
         return result
     except Exception as e:
         raise HTTPException(
@@ -28,18 +32,21 @@ async def process_data(
         )
 
 
-@data_processing_router.post("/process/srt_media/extract",
-                             )
-async def process_data(
-    srt_file: UploadFile = File(...),
-    media_file: UploadFile = File(...),
-    image_file: UploadFile = File(...)
+@data_processing_router.post(
+    "/educational-content/extract-pdf-visuals", response_model=EducationalContent
+)
+async def extract_pdf_visuals_and_align(
+    srt_file: UploadFile = File(..., description="SRT subtitle file"),
+    media_file: UploadFile = File(..., description="Video or audio media file"),
+    pdf_file: UploadFile = File(..., description="PDF file containing visual elements"),
 ):
     try:
         # Create pipeline
         service = get_data_processing_service()
         # Align paragraphs with audio
-        result = await service.run_extracting_agent(media_file=media_file, srt_file=srt_file, pdf_file=image_file)
+        result = await service.extract_and_align_pdf_visuals(
+            media_file=media_file, srt_file=srt_file, pdf_file=pdf_file
+        )
         return result
     except Exception as e:
         raise HTTPException(

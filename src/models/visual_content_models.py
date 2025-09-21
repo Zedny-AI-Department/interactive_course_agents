@@ -211,3 +211,28 @@ class LLMVisualContent(BaseModel):
     )
     visual_index: int = Field(description="Index reference to the visual")
     description: str = Field(description="Description of the visual content")
+
+
+class LLMVisualContentWithCopyright(BaseModel):
+    """Container for visual content with copyright assessment.
+
+    Extended version of LLMVisualContent that includes copyright protection
+    information for handling protected vs unprotected images.
+
+    Attributes:
+        type: The type of visual content contained
+        content: The actual visual content (chart, image, or table)
+        visual_index: Index reference to the visual
+        description: Description of the visual content
+        is_protected: Whether the content is protected by copyright
+    """
+
+    type: Literal["chart", "image", "table"] = Field(
+        description="The type of visual content"
+    )
+    content: ChartContent | ImageContent | TableContent = Field(
+        description="The actual visual content"
+    )
+    visual_index: int = Field(description="Index reference to the visual")
+    description: str = Field(description="Description of the visual content")
+    is_protected: bool = Field(description="Whether content is copyright protected")

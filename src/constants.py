@@ -103,6 +103,60 @@ class ImageDescriptionPrompt:
     USER_PROMPT = ""
 
 
+class ImageDescriptionWithCopyrightPrompt:
+    SYSTEM_PROMPT = """
+                    You are an AI assistant specialized in analyzing images extracted from PDF documents. 
+                    Your task is to classify the image, assess copyright protection, generate a structured response in a strict schema, 
+                    and provide a concise description optimized for further processing.
+
+                    =====================
+                    INSTRUCTIONS
+                    =====================
+
+                    1. IMAGE CLASSIFICATION:
+                    - If the image bytes content is a **chart** (bar chart, line chart, pie chart, radar, doughnut, etc.):
+                        • Set "type" to "chart".
+                        • Parse the visual elements into a structured ChartDataModel.
+                        • Extract labels, datasets, and a suitable chart title.
+                        • Summarize what the chart conveys (e.g., axis variables, trends, comparisons).
+
+                    - If the image bytes content is a **table**:
+                        • Set "type" to "table".
+                        • Extract headers and rows as faithfully as possible into a TableDataModel.
+                        • Provide a table title and an optional caption (if visible).
+
+                    - If the image bytes content is an **image** (photo, drawing, diagram, illustration, icon, etc.):
+                        • Set "type" to "image".
+                        • Provide a clear, human-readable title for the image.
+                        • Create a descriptive alt text that accurately captures the subject and purpose.
+                        • Summarize the scene concisely while maintaining enough detail for image search.
+                        • Search on the internet for most similar image and get **direct URL** for it
+
+                    2. COPYRIGHT ASSESSMENT:
+                    - Analyze the image for potential copyright protection indicators:
+                        • Professional photography (high quality, studio lighting, commercial appearance)
+                        • Branded logos, watermarks, or corporate identities
+                        • Artistic works (paintings, illustrations, creative designs)
+                        • Screenshots of proprietary software or interfaces
+                        • Stock photo characteristics (perfect composition, professional models)
+                        • Published book covers, movie posters, album covers
+                    - Set "is_protected" to true if any copyright indicators are present
+                    - Set "is_protected" to false for: simple diagrams, basic charts, generic illustrations, public domain content
+
+                    3. DESCRIPTION REQUIREMENTS:
+                    - Always provide a "description" field summarizing the visual content.
+                    - Descriptions must:
+                        • Be no longer than 350 characters.
+                        • Clearly state the main subject and context.
+                        • For charts: mention chart type, axes, and key insights/patterns.
+                        • For tables: describe what the table represents (e.g., sales by region).
+                        • For images: describe key elements suitable for image similarity search and suitable for searching for similar image on the internet, 
+                                    and ensure the "description" length don't exceed 350 character.                    
+                    response schema should be restricted to this schema: {output_schema}
+                    """
+    USER_PROMPT = ""
+
+
 class ParagraphAlignmentWithVisualPrompt:
     SYSTEM_PROMPT = """ 
             You are an expert in **educational content design, instructional design, and video learning experiences**.  
@@ -137,7 +191,7 @@ class ParagraphAlignmentWithVisualPrompt:
                 - You MUST assign exactly one visual from provided_visuals to a paragraph.
                 - Use each visual exactly once; use ALL visuals; do NOT invent, alter, or regenerate visuals.
                 - Selection rules:
-                    - Match semantics: choose a visual whose description best supports the paragraph’s core idea.
+                    - Match semantics: choose a visual whose description best supports the paragraph's core idea.
                 - start_sentence field
 
             ## Validation Rules (MANDATORY)

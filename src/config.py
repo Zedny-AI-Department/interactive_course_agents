@@ -7,8 +7,14 @@ class Settings(BaseSettings):
     TRANSCRIPTION_API_URL: str = Field(alias="TRANSCRIPTION_API_URL")
     OPENAI_API_KEY: str = Field(alias="OPENAI_API_KEY")
     TAVILY_API_KEY: str = Field(alias="TAVILY_API_KEY")
+    DATABASE_URL: str
+    STORAGE_KEY: str
+    STORAGE_URL: str
 
-    model_config = SettingsConfigDict(env_file=".env")
+    class Config:
+        # Automatically read from .env file
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
 settings = Settings()

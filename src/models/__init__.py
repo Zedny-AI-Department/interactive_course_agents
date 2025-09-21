@@ -9,6 +9,7 @@ from .visual_content_models import (
     ExtractedImage,
     VisualMapping,
     LLMVisualContent,
+    LLMVisualContentWithCopyright,
 )
 from .llm_response_models import (
     LLMVisualItem,
@@ -64,6 +65,7 @@ __all__ = [
     "ExtractedImage",
     "VisualMapping",
     "LLMVisualContent",
+    "LLMVisualContentWithCopyright",
     "LLMVisualItem",
     "LLMParagraphBase",
     "LLMParagraphWithVisual",

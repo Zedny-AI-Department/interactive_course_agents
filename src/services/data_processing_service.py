@@ -19,6 +19,7 @@ from src.models import (
     LLMParagraphWithVisual,
     WordTimestamp,
     LLMVisualContent,
+    LLMVisualContentWithCopyright,
     LLMParagraphWithVisualRef,
     AlignedParagraph,
 )
@@ -128,6 +129,45 @@ class DataProcessingService:
         )
         return EducationalContent(paragraphs=combined_result)
 
+    async def extract_and_align_pdf_visuals_with_copyright_detection(
+        self, srt_file: UploadFile, media_file: UploadFile, pdf_file: UploadFile
+    ) -> EducationalContent:
+        """Extract visuals from PDF with copyright detection and align them with paragraphs.
+
+        This pipeline analyzes images for copyright protection and handles them differently:
+        - Protected images: search for similar images online
+        - Unprotected images: use extracted images directly from PDF
+
+        Args:
+            srt_file: The subtitle file containing text transcriptions
+            media_file: The video/audio file for timestamp alignment
+            pdf_file: The PDF file containing visual elements to extract
+
+        Returns:
+            EducationalContent: Structured paragraphs with aligned PDF visuals and timestamps
+
+        Raises:
+            Exception: If generated paragraphs and aligned paragraphs lengths don't match
+        """
+        srt_text = await self._extract_srt_text(srt_file)
+        processed_visuals = await self._extract_and_process_pdf_images_with_copyright(pdf_file)
+
+        generated_output = await self._generate_paragraphs_with_visual_mapping_for_copyright(
+            srt_text, processed_visuals
+        )
+        aligned_paragraphs = self._match_paragraphs_to_extracted_visuals_with_copyright(
+            generated_output=generated_output, processed_visuals=processed_visuals
+        )
+        paragraph_items = self._create_paragraph_items(aligned_paragraphs.paragraphs)
+        video_alignment_result = await self._align_with_video_timestamps(
+            media_file, paragraph_items
+        )
+        combined_result = self._merge_video_alignment_with_generated_paragraphs(
+            video_paragraph_alignment_result=video_alignment_result,
+            generated_output=aligned_paragraphs,
+        )
+        return EducationalContent(paragraphs=combined_result)
+
     async def _extract_srt_text(self, srt_file: UploadFile) -> str:
         """Extract text content from SRT file.
 
@@ -180,6 +220,25 @@ class DataProcessingService:
         )
         return await self.img_service.search_images(original_images=extracted_visuals)
 
+    async def _extract_and_process_pdf_images_with_copyright(
+        self, pdf_file: UploadFile
+    ) -> List[LLMVisualContentWithCopyright]:
+        """Extract images from PDF file and process them with copyright detection.
+
+        Args:
+            pdf_file: The PDF file to extract images from
+
+        Returns:
+            List[LLMVisualContentWithCopyright]: Processed visual models with copyright info
+        """
+        pdf_bytes = await pdf_file.read()
+        extracted_visuals = self.file_processing_service.extract_images_from_pdf(
+            pdf_bytes=pdf_bytes
+        )
+        return await self.img_service.search_images_with_copyright_detection(
+            original_images=extracted_visuals
+        )
+
     async def _generate_paragraphs_with_visual_mapping(
         self, srt_text: str, processed_visuals: List[LLMVisualContent]
     ) -> LLMVisualAlignmentResult:
@@ -191,6 +250,37 @@ class DataProcessingService:
 
         Returns:
             GeneratedParagraphsVisualAlignmentModel: Generated paragraphs with visual mappings
+        """
+        visuals_map = [
+            VisualMapping(
+                visual_index=visual.visual_index, description=visual.description
+            )
+            for visual in processed_visuals
+        ]
+        formatted_prompt = self.llm_service.format_prompt(
+            system_message=ParagraphAlignmentWithVisualPrompt.SYSTEM_PROMPT,
+            user_message=ParagraphAlignmentWithVisualPrompt.USER_PROMPT,
+            script=srt_text,
+            provided_visuals=visuals_map,
+            output_schema=LLMVisualAlignmentResult.model_json_schema(),
+        )
+        return await self.llm_service.ask_openai_llm(
+            model_name="gpt-4o",
+            output_schema=LLMVisualAlignmentResult,
+            prompt=formatted_prompt,
+        )
+
+    async def _generate_paragraphs_with_visual_mapping_for_copyright(
+        self, srt_text: str, processed_visuals: List[LLMVisualContentWithCopyright]
+    ) -> LLMVisualAlignmentResult:
+        """Generate paragraphs with visual alignment mapping for copyright-aware visuals.
+
+        Args:
+            srt_text: The text content from SRT file
+            processed_visuals: List of processed visual models with copyright info
+
+        Returns:
+            LLMVisualAlignmentResult: Generated paragraphs with visual mappings
         """
         visuals_map = [
             VisualMapping(
@@ -442,6 +532,32 @@ class DataProcessingService:
                 aligned_result.append(aligned_paragraph)
         return LLMParagraphList(paragraphs=aligned_result)
 
+    def _match_paragraphs_to_extracted_visuals_with_copyright(
+        self,
+        generated_output: LLMVisualAlignmentResult,
+        processed_visuals: List[LLMVisualContentWithCopyright],
+    ) -> LLMParagraphList:
+        """Match generated paragraphs with their corresponding copyright-aware visuals.
+
+        Args:
+            generated_output: Generated paragraphs with visual alignment data
+            processed_visuals: List of processed visual models with copyright info
+
+        Returns:
+            LLMParagraphList: Paragraphs with matched visuals
+        """
+        aligned_result = []
+        for paragraph in generated_output.paragraphs:
+            if paragraph.visual_reference is not None:
+                aligned_visual = self._find_matching_visual_with_copyright(
+                    paragraph.visual_reference.visual_index, processed_visuals
+                )
+                aligned_paragraph = self._create_aligned_paragraph_with_copyright_visual(
+                    paragraph, aligned_visual
+                )
+                aligned_result.append(aligned_paragraph)
+        return LLMParagraphList(paragraphs=aligned_result)
+
     def _find_matching_visual(
         self, visual_index: int, processed_visuals: List[LLMVisualContent]
     ):
@@ -474,6 +590,52 @@ class DataProcessingService:
 
         Returns:
             GeneratedParagraphWithVisualModel: Paragraph with aligned visual
+        """
+        new_aligned_visual = LLMVisualItem(
+            type=aligned_visual.type,
+            content=aligned_visual.content,
+            start_sentence=paragraph.visual_reference.start_sentence,
+        )
+        aligned_paragraph = LLMParagraphWithVisual(
+            paragraph_index=paragraph.paragraph_index,
+            paragraph_text=paragraph.paragraph_text,
+            keywords=paragraph.keywords,
+            visuals=new_aligned_visual.model_dump(),
+        )
+        return aligned_paragraph
+
+    def _find_matching_visual_with_copyright(
+        self, visual_index: int, processed_visuals: List[LLMVisualContentWithCopyright]
+    ):
+        """Find the copyright-aware visual that matches the given visual index.
+
+        Args:
+            visual_index: The index of the visual to find
+            processed_visuals: List of processed visual models with copyright info
+
+        Returns:
+            The matching visual model or None
+        """
+        return next(
+            (
+                aligned_visual
+                for aligned_visual in processed_visuals
+                if aligned_visual.visual_index == visual_index
+            ),
+            None,
+        )
+
+    def _create_aligned_paragraph_with_copyright_visual(
+        self, paragraph: LLMParagraphWithVisualRef, aligned_visual: LLMVisualContentWithCopyright
+    ) -> LLMParagraphWithVisual:
+        """Create an aligned paragraph with its associated copyright-aware visual.
+
+        Args:
+            paragraph: The original paragraph object
+            aligned_visual: The matching visual model with copyright info
+
+        Returns:
+            LLMParagraphWithVisual: Paragraph with aligned visual
         """
         new_aligned_visual = LLMVisualItem(
             type=aligned_visual.type,

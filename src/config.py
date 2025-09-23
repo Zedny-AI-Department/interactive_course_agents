@@ -3,8 +3,8 @@ from pydantic import Field
 
 
 class Settings(BaseSettings):
-    ALIGNMENT_API_URL: str = Field(alias='ALIGNMENT_API_URL')
-    TRANSCRIPTION_API_URL: str = Field(alias='TRANSCRIPTION_API_URL')
+    ALIGNMENT_API_URL: str = Field(alias="ALIGNMENT_API_URL")
+    TRANSCRIPTION_API_URL: str = Field(alias="TRANSCRIPTION_API_URL")
     OPENAI_API_KEY: str = Field(alias="OPENAI_API_KEY")
     TAVILY_API_KEY: str = Field(alias="TAVILY_API_KEY")
     REDIS_URL: str = Field(default="redis://localhost:6379", alias="REDIS_URL")
@@ -12,8 +12,14 @@ class Settings(BaseSettings):
     MAX_GLOBAL_CONCURRENT_TASKS: int = Field(default=20, alias="MAX_GLOBAL_CONCURRENT_TASKS")
     # DATABASE_URL: str
     # STORAGE_KEY: str
+    # STORAGE_URL: str    DATABASE_URL: str
+    # STORAGE_KEY: str
     # STORAGE_URL: str
 
-    model_config = SettingsConfigDict(env_file=".env")  
+    class Config:
+        # Automatically read from .env file
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
 
 settings = Settings()

@@ -1,14 +1,18 @@
 from langchain.chat_models import init_chat_model
-from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain.prompts import (
+    ChatPromptTemplate,
+    SystemMessagePromptTemplate,
+    HumanMessagePromptTemplate,
+)
 from langchain.chat_models import init_chat_model
 from langchain_tavily import TavilySearch
 from langgraph.prebuilt import create_react_agent
-from langchain_core.output_parsers import PydanticOutputParser
-from langchain_core.prompts import PromptTemplate
 
+from src.constants import StructureOutputPrompt
 from src.config import settings
 
 import os
+
 os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
 os.environ["TAVILY_API_KEY"] = settings.TAVILY_API_KEY
 
@@ -21,10 +25,15 @@ class LLMService:
         pass
 
     async def ask_openai_llm(
-        self, prompt: ChatPromptTemplate, model_name: str = "gpt-4o-mini", output_schema: type = None,
+        self,
+        prompt: ChatPromptTemplate,
+        model_name: str = "gpt-4o-mini",
+        output_schema: type = None,
     ) -> any:
         """Send a prompt to the OpenAI LLM and return the response."""
-        return await self._ask_llm(prompt, model_name, model_provider="openai", output_schema=output_schema)
+        return await self._ask_llm(
+            prompt, model_name, model_provider="openai", output_schema=output_schema
+        )
 
     async def _ask_llm(
         self,
@@ -35,8 +44,13 @@ class LLMService:
         **kwargs,
     ) -> any:
         """Send a prompt to the LLM and return the response."""
-        llm = init_chat_model(model_name, model_provider=model_provider, )
-        structured_llm = llm.with_structured_output(output_schema) if output_schema else llm
+        llm = init_chat_model(
+            model_name,
+            model_provider=model_provider,
+        )
+        structured_llm = (
+            llm.with_structured_output(output_schema) if output_schema else llm
+        )
         response = structured_llm.invoke(prompt, **kwargs)
         return response
 
@@ -47,7 +61,13 @@ class LLMService:
         chat_prompt = ChatPromptTemplate.from_messages([system_prompt, user_prompt])
         return chat_prompt.format(**kwargs)
 
-    async def ask_search_agent(self, prompt: ChatPromptTemplate, model_name: str, model_provider: str, output_schema: type = None):
+    async def ask_search_agent(
+        self,
+        prompt: ChatPromptTemplate,
+        model_name: str,
+        model_provider: str,
+        output_schema: type = None,
+    ):
         model = init_chat_model(model=model_name, model_provider=model_provider)
         search = TavilySearch(max_results=2)
         tools = [search]
@@ -56,35 +76,17 @@ class LLMService:
         print(f"response: {response}")
         if output_schema:
             agent_output = response["messages"][-1].content
-            structured_agent_response = await self._structure_agent_response(agent_output=agent_output, output_schema=output_schema)
+            structured_agent_response = await self._structure_agent_response(
+                agent_output=agent_output, output_schema=output_schema
+            )
             return structured_agent_response
         return response["messages"][-1].content
 
     async def _structure_agent_response(self, agent_output: str, output_schema: type):
-        parser = PydanticOutputParser(pydantic_object=output_schema)
-        llm = init_chat_model("gpt-4o-mini", model_provider="openai")
-
-        format_prompt = PromptTemplate(
-        template="""
-            Based on the following information, provide a structured response.
-
-            Information: {agent_output}
-
-            {format_instructions}
-
-            Make sure to include:
-            1. A clear answer to the user's question
-            2. Ensure all schema fields is mapped correctly
-            3. for each paragraph words, if there is missed-words or wrong words in list of paragraph words, try to correct it based on its place on paragraph but be precise.
-
-            Response:
-            """,
-                input_variables=["agent_output"],
-                partial_variables={"format_instructions": parser.get_format_instructions()}
-            )
-
-        structured_prompt = format_prompt.format(agent_output=agent_output)
-        structured_model = llm | parser
-        structured_response = structured_model.invoke(structured_prompt)
-        return structured_response
-            
+        formatted_prompt = self.format_prompt(
+            system_message=StructureOutputPrompt.SYSTEM_PROMPT,
+            user_message=StructureOutputPrompt.USER_PROMPT,
+            agent_output=agent_output,
+            format_instructions=output_schema.model_json_schema(),
+        )
+        return await self.ask_openai_llm(prompt=formatted_prompt, output_schema=output_schema)

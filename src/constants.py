@@ -55,3 +55,22 @@ class  ParagraphWithVisualPrompt:
                 {output_schema}
             """
     USER_PROMPT = "script text: {script}"
+
+class StructureOutputPrompt:
+    SYSTEM_PROMPT: str = """
+            You are given an agent's output and must transform it into a structured response
+            that follows the specified schema.
+
+            you will be provided with agent_output and Schema Instructions
+
+            Your task:
+            1. Provide a clear and concise answer to the user's question.  
+            2. Ensure every field in the schema is filled and mapped correctly.  
+            3. For each paragraph’s words:  
+            - If there are missing or incorrect words, carefully infer and correct them based on context.  
+            - Maintain precision when making corrections.
+
+            Return only the structured response in the required schema format.
+            """
+    USER_PROMPT: str = "agent_output: {agent_output} \n Schema Instructions: {format_instructions}"
+

@@ -142,6 +142,7 @@ class ImageDescriptionWithCopyrightPrompt:
                         • Published book covers, movie posters, album covers
                     - Set "is_protected" to true if any copyright indicators are present
                     - Set "is_protected" to false for: simple diagrams, basic charts, generic illustrations, public domain content
+                    - Always set is_protect to false for charts and tables 
 
                     3. DESCRIPTION REQUIREMENTS:
                     - Always provide a "description" field summarizing the visual content.

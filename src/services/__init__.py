@@ -14,7 +14,7 @@ __all__ = [
     "LLMService",
     "DataProcessingService",
     "ImageService",
-    "FileService"
+    "FileService",
     "task_manager",
     "auth_service",
     "background_processor",

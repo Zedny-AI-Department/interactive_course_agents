@@ -197,7 +197,7 @@ class DataProcessingService:
             output_schema=LLMParagraphList.model_json_schema(),
         )
         return await self.llm_service.ask_search_agent(
-            model_name="gpt-4o",
+            model_name="gpt-4o-mini",
             model_provider="openai",
             output_schema=LLMParagraphList,
             prompt=formatted_prompt,
@@ -265,7 +265,7 @@ class DataProcessingService:
             output_schema=LLMVisualAlignmentResult.model_json_schema(),
         )
         return await self.llm_service.ask_openai_llm(
-            model_name="gpt-4o",
+            model_name="gpt-4o-mini",
             output_schema=LLMVisualAlignmentResult,
             prompt=formatted_prompt,
         )
@@ -296,7 +296,7 @@ class DataProcessingService:
             output_schema=LLMVisualAlignmentResult.model_json_schema(),
         )
         return await self.llm_service.ask_openai_llm(
-            model_name="gpt-4o",
+            model_name="gpt-4o-mini",
             output_schema=LLMVisualAlignmentResult,
             prompt=formatted_prompt,
         )

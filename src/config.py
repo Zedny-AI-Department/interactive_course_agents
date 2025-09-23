@@ -10,7 +10,9 @@ class Settings(BaseSettings):
     REDIS_URL: str = Field(default="redis://localhost:6379", alias="REDIS_URL")
     MAX_CONCURRENT_TASKS_PER_USER: int = Field(default=5, alias="MAX_CONCURRENT_TASKS_PER_USER")
     MAX_GLOBAL_CONCURRENT_TASKS: int = Field(default=20, alias="MAX_GLOBAL_CONCURRENT_TASKS")
-
+    # DATABASE_URL: str
+    # STORAGE_KEY: str
+    # STORAGE_URL: str
 
     model_config = SettingsConfigDict(env_file=".env")  
 

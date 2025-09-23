@@ -1,6 +1,7 @@
 from fastapi import UploadFile
 import tempfile
 import os
+import httpx
 
 from src.services.task_manager_service import task_manager
 from src.services.data_processing_service import DataProcessingService
@@ -442,6 +443,192 @@ class BackgroundProcessor:
                     except OSError:
                         pass  # File already deleted
                         
+        except Exception as e:
+            # Update task as failed
+            await task_manager.update_task_status(
+                task_id, 
+                TaskStatus.FAILED, 
+                progress=0,
+                error_message=str(e)
+            )
+            raise
+    
+    async def convert_image_to_3d_task(
+        self, 
+        task_id: str, 
+        image_file_content: bytes, 
+        image_filename: str,
+        geometry_format: str = "glb",
+        quality: str = "medium"
+    ):
+        """Convert image to 3D model in background."""
+        try:
+            # Update task status to processing
+            await task_manager.update_task_status(
+                task_id, 
+                TaskStatus.PROCESSING, 
+                TaskStage.PROCESSING_LLM, 
+                progress=20
+            )
+            
+            # Create temporary file for the image
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(image_filename)[1]) as image_temp:
+                # Write file content to temp file
+                image_temp.write(image_file_content)
+                image_temp.flush()
+                
+                try:
+                    # Update progress - starting 3D conversion
+                    await task_manager.update_task_status(
+                        task_id, 
+                        TaskStatus.PROCESSING, 
+                        TaskStage.PROCESSING_LLM, 
+                        progress=50
+                    )
+                    
+                    # Get image service
+                    llm_service = LLMService()
+                    img_service = ImageService(llm_service=llm_service)
+                    
+                    # Update progress - processing 3D model
+                    await task_manager.update_task_status(
+                        task_id, 
+                        TaskStatus.PROCESSING, 
+                        TaskStage.ALIGNING, 
+                        progress=80
+                    )
+                    
+                    # Convert image to 3D
+                    result = await img_service.convert_image_to_3d(
+                        image_path=image_temp.name,
+                        geometry_format=geometry_format,
+                        quality=quality
+                    )
+                    
+                    # Update task as completed
+                    await task_manager.update_task_status(
+                        task_id, 
+                        TaskStatus.COMPLETED, 
+                        TaskStage.COMPLETED, 
+                        progress=100,
+                        result={
+                            "success": True,
+                            "message": "Image successfully converted to 3D",
+                            "result": result,
+                            "input_filename": image_filename,
+                            "geometry_format": geometry_format,
+                            "quality": quality
+                        }
+                    )
+                    
+                finally:
+                    # Clean up temporary file
+                    try:
+                        os.unlink(image_temp.name)
+                    except OSError:
+                        pass  # File already deleted
+                        
+        except Exception as e:
+            # Update task as failed
+            await task_manager.update_task_status(
+                task_id, 
+                TaskStatus.FAILED, 
+                progress=0,
+                error_message=str(e)
+            )
+            raise
+    
+    async def convert_image_url_to_3d_task(
+        self, 
+        task_id: str, 
+        image_url: str,
+        geometry_format: str = "glb",
+        quality: str = "medium"
+    ):
+        """Convert image from URL to 3D model in background."""
+        try:
+            # Update task status to processing - downloading image
+            await task_manager.update_task_status(
+                task_id, 
+                TaskStatus.PROCESSING, 
+                TaskStage.TRANSCRIBING, 
+                progress=20
+            )
+            
+            # Download image from URL
+            async with httpx.AsyncClient() as client:
+                response = await client.get(image_url)
+                response.raise_for_status()
+                image_content = response.content
+                
+                # Determine file extension from content-type or URL
+                content_type = response.headers.get('content-type', '')
+                if 'image/jpeg' in content_type or 'image/jpg' in content_type:
+                    file_extension = '.jpg'
+                elif 'image/png' in content_type:
+                    file_extension = '.png'
+                elif 'image/webp' in content_type:
+                    file_extension = '.webp'
+                else:
+                    # Fallback to URL extension or default to .jpg
+                    file_extension = os.path.splitext(image_url)[1] or '.jpg'
+            
+            # Update task status to processing - converting to 3D
+            await task_manager.update_task_status(
+                task_id, 
+                TaskStatus.PROCESSING, 
+                TaskStage.PROCESSING_LLM, 
+                progress=40
+            )
+            
+            # Create temporary file for the downloaded image
+            with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as image_temp:
+                # Write image content to temp file
+                image_temp.write(image_content)
+                image_temp.flush()
+                
+                try:
+                    # Get image service
+                    llm_service = LLMService()
+                    img_service = ImageService(llm_service=llm_service)
+                    
+                    # Update progress - processing 3D model
+                    await task_manager.update_task_status(
+                        task_id, 
+                        TaskStatus.PROCESSING, 
+                        TaskStage.ALIGNING, 
+                        progress=80
+                    )
+                    
+                    # Convert image to 3D using local file path
+                    result = await img_service.convert_image_to_3d(
+                        image_path=image_temp.name,
+                        geometry_format=geometry_format,
+                        quality=quality
+                    )
+                    
+                    # Update task as completed
+                    await task_manager.update_task_status(
+                        task_id, 
+                        TaskStatus.COMPLETED, 
+                        TaskStage.COMPLETED, 
+                        progress=100,
+                        result={
+                            "success": True,
+                            "message": "Image successfully converted to 3D",
+                            "result": result,
+                            "input_url": image_url,
+                            "geometry_format": geometry_format,
+                            "quality": quality
+                        }
+                    )
+                    
+                finally:
+                    # Clean up temporary file
+                    try:
+                        os.unlink(image_temp.name)
+                    except OSError:
+                        pass  # File already deleted                        
         except Exception as e:
             # Update task as failed
             await task_manager.update_task_status(

@@ -1,12 +1,14 @@
 import base64
 import mimetypes
 from typing import Any, Dict, List
+import fal_client
+import os
 
 from src.constants import ImageDescriptionPrompt, ImageDescriptionWithCopyrightPrompt
-from src.models import VisualContent, ExtractedImage, LLMVisualContent, LLMVisualContentWithCopyright
+from src.models import ExtractedImage, LLMVisualContent, LLMVisualContentWithCopyright
 from src.services.llm_service import LLMService
 from src.utils import search_with_tavily
-
+from src.config import settings
 
 class ImageProcessingService:
     """A service that handles image processing tools."""
@@ -122,3 +124,41 @@ class ImageProcessingService:
             except Exception as e:
                 continue
         return processed_imgs
+
+    async def convert_image_to_3d(
+        self, 
+        image_path: str, 
+        geometry_format: str = "glb", 
+        quality: str = "medium"
+    ) -> Dict[str, Any]:
+        """Convert image to 3D model using fal-ai/hyper3d/rodin.
+        
+        Args:
+            image_path: Path to the input image file
+            geometry_format: Output geometry format (default: "glb")
+            material: Material type (default: "PBR")
+            quality: Quality setting (default: "medium")
+            
+        Returns:
+            Dict containing the 3D conversion result
+        """
+        try:
+            print(1)
+            os.environ["FAL_KEY"] = settings.FAL_KEY
+            # Encode image as data URL for fal_client
+            print(2)
+            image_data_url = fal_client.encode_file(image_path)
+            print(3, image_data_url)
+            input_args = {
+                "input_image_urls": [image_data_url],
+                "geometry_file_format": geometry_format,
+                "quality": quality,
+            }
+            result = fal_client.subscribe(
+                "fal-ai/hyper3d/rodin",
+                arguments=input_args,
+            )
+            print(f"result: {type(result)}, {result}")
+            return result["model_mesh"]
+        except Exception as e:
+            raise Exception(f"Failed to convert image to 3D: {str(e)}")

@@ -5,6 +5,8 @@ from src.services import (
     DataProcessingService,
     ImageService,
     FileService,
+    StorageService,
+    BackgroundProcessor,
 )
 
 
@@ -28,6 +30,10 @@ def get_file_service():
     return FileService()
 
 
+def get_storage_service():
+    return StorageService()
+
+
 def get_data_processing_service():
     return DataProcessingService(
         video_service=get_video_service(),
@@ -35,4 +41,12 @@ def get_data_processing_service():
         srt_service=get_srt_service(),
         img_service=get_image_service(),
         file_processing_service=get_file_service(),
+        storage_service=get_storage_service()
+    )
+
+
+def get_background_processor():
+    return BackgroundProcessor(
+        img_service=get_image_service(),
+        data_processing_service=get_data_processing_service(),
     )

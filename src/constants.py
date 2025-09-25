@@ -1,3 +1,9 @@
+class StorageAPIRoutes:
+    FILES = "/assist-files/"
+    IMAGES = "/assist-images/"
+    FILE_TYPES = "/assist-files/types/"
+
+
 class ParagraphWithVisualPrompt:
     SYSTEM_PROMPT = """ 
             You are an expert in **educational content design, instructional design, and video learning experiences**.  

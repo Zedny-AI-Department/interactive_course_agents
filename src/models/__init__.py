@@ -8,11 +8,12 @@ from .visual_content_models import (
     VisualContent,
     ExtractedImage,
     VisualMapping,
-    LLMVisualContent,
+    LLMsearchedVisualContent,
     LLMVisualContentWithCopyright,
+    StoredVisualContent,
 )
 from .llm_response_models import (
-    LLMVisualItem,
+    LLMGeneratedVisualItem,
     LLMParagraphBase,
     LLMParagraphWithVisual,
     LLMParagraphList,
@@ -32,12 +33,21 @@ from .transcription_output_model import (
     AlignedParagraph,
 )
 from .final_output_models import ProcessedParagraph, EducationalContent
+from .storage_models import (
+    ImageTypeEnum,
+    FileCreateSchema,
+    ImageCreateSchema,
+    FileResponseSchema,
+    ImageResponseSchema,
+)
+
+from .storage_models import FileTypesResponseSchema
 
 # Legacy model names - these map to new models for backward compatibility
 GeneratedParagraphWithVisualListModel = LLMParagraphList
-GeneratedVisualItemModel = LLMVisualItem
+GeneratedVisualItemModel = LLMGeneratedVisualItem
 GeneratedParagraphsVisualAlignmentModel = LLMVisualAlignmentResult
-GeneratedParagraphVisualAlignmentModel = LLMParagraphWithVisualRef
+GeneratedParagraphVisualAlignmentModel = LLMsearchedVisualContent
 GeneratedParagraphWithVisualModel = LLMParagraphWithVisual
 ParagraphWithVisualListModel = EducationalContent
 ParagraphWithVisualModel = ProcessedParagraph
@@ -64,9 +74,10 @@ __all__ = [
     "VisualContent",
     "ExtractedImage",
     "VisualMapping",
-    "LLMVisualContent",
+    "LLMsearchedVisualContent",
     "LLMVisualContentWithCopyright",
-    "LLMVisualItem",
+    "StoredVisualContent",
+    "LLMGeneratedVisualItem",
     "LLMParagraphBase",
     "LLMParagraphWithVisual",
     "LLMParagraphList",
@@ -83,7 +94,12 @@ __all__ = [
     "ParagraphItem",
     "ProcessedParagraph",
     "EducationalContent",
-    "AlignedParagraph"
+    "AlignedParagraph",
+    "FileImageTypeEnum",
+    "FileCreateSchema",
+    "ImageCreateSchema", 
+    "FileResponseSchema",
+    "ImageResponseSchema",
     # Legacy model names for backward compatibility
     "SegmentTranscriptionModelWithWords",
     "WordTranscriptionModel",
@@ -101,4 +117,7 @@ __all__ = [
     "ExtractedImageModel",
     "DescribedVisualModel",
     "SearchedImageVisualModel",
+
+    # Storage model
+    "FileTypesResponseSchema",
 ]

@@ -6,6 +6,7 @@ or export to various formats.
 """
 
 from typing import List, Optional
+from uuid import UUID
 from pydantic import BaseModel, Field
 
 from .base_models import KeywordItem, WordTimestamp, TimestampedContent
@@ -75,31 +76,5 @@ class EducationalContent(BaseModel):
     paragraphs: List[ProcessedParagraph] = Field(
         description="List of fully processed paragraphs"
     )
-    total_duration: Optional[float] = Field(
-        default=None, description="Total duration of the content in seconds"
-    )
-    content_metadata: Optional[dict] = Field(
-        default=None, description="Additional content metadata"
-    )
 
-    @property
-    def paragraph_count(self) -> int:
-        """Get the total number of paragraphs."""
-        return len(self.paragraphs)
-
-    @property
-    def visual_count(self) -> int:
-        """Get the total number of visual elements."""
-        return sum(1 for p in self.paragraphs if p.visual_content is not None)
-
-    def get_paragraphs_with_visuals(self) -> List[ProcessedParagraph]:
-        """Get only paragraphs that have associated visual content."""
-        return [p for p in self.paragraphs if p.visual_content is not None]
-
-    def get_paragraphs_by_time_range(
-        self, start: float, end: float
-    ) -> List[ProcessedParagraph]:
-        """Get paragraphs within a specific time range."""
-        return [
-            p for p in self.paragraphs if p.start_time >= start and p.end_time <= end
-        ]
+    assist_file_id: Optional[UUID] = None

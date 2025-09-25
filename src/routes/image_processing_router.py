@@ -4,29 +4,24 @@ import tempfile
 import os
 import httpx
 
+from src.services.background_processor import BackgroundProcessor
 from src.services.image_service import ImageProcessingService
-from src.services.llm_service import LLMService
 from src.services import auth_service, task_manager
-from src.services.background_processor import background_processor
 from src.models.task_models import CreateTaskResponse
+from src.container import get_background_processor, get_image_service
+
 
 image_processing_router = APIRouter(prefix="/image", tags=["image"])
 
 
-def get_image_processing_service():
-    """Dependency to get image processing service instance."""
-    llm_service = LLMService()
-    return ImageProcessingService(llm_service)
-
-
-@image_processing_router.post("/convert-to-3d/file")
+@image_processing_router.post("/convert-to-3d/file/preview/")
 async def convert_image_to_3d(
     image_file: UploadFile = File(..., description="Image file to convert to 3D"),
     geometry_format: str = Form(default="glb", description="Output geometry format"),
     quality: str = Form(
         default="medium", description="Quality setting (low, medium, high)"
     ),
-    service: ImageProcessingService = Depends(get_image_processing_service),
+    service: ImageProcessingService = Depends(get_image_service),
 ) -> Dict[str, Any]:
     """Convert an uploaded image to a 3D model.
 
@@ -46,22 +41,15 @@ async def convert_image_to_3d(
         ):
             raise HTTPException(status_code=400, detail="File must be an image")
 
-        # Create temporary file for the uploaded image
-        with tempfile.NamedTemporaryFile(
-            delete=False, suffix=os.path.splitext(image_file.filename or "image.jpg")[1]
-        ) as tmp_file:
-            content = await image_file.read()
-            tmp_file.write(content)
-            tmp_file_path = tmp_file.name
-
         try:
+            image_bytes = await image_file.read()
             # Convert image to 3D
             result = await service.convert_image_to_3d(
-                image_path=tmp_file_path,
+                image_bytes=image_bytes,
+                image_name=image_file.filename,
                 geometry_format=geometry_format,
                 quality=quality,
             )
-
             return {
                 "success": True,
                 "message": "Image successfully converted to 3D",
@@ -70,14 +58,13 @@ async def convert_image_to_3d(
                 "geometry_format": geometry_format,
                 "quality": quality,
             }
-
-        finally:
-            # Clean up temporary file
-            if os.path.exists(tmp_file_path):
-                os.unlink(tmp_file_path)
-
-    except HTTPException:
-        raise
+        except Exception as e:
+            raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while converting image to 3D: {str(e)}",
+        )
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -85,15 +72,14 @@ async def convert_image_to_3d(
         )
 
 
-@image_processing_router.post("/convert-to-3d/url")
+@image_processing_router.post("/convert-to-3d/url/preview/")
 async def convert_image_to_3d_from_url(
     image_url: str = Form(..., description="URL of the image to convert to 3D"),
     geometry_format: str = Form(default="glb", description="Output geometry format"),
     quality: str = Form(
         default="medium", description="Quality setting (low, medium, high)"
     ),
-    user_id: str = Depends(auth_service.get_current_user_id),
-    service: ImageProcessingService = Depends(get_image_processing_service),
+    service: ImageProcessingService = Depends(get_image_service),
 ) -> Dict[str, Any]:
     """Convert an image from URL to a 3D model.
 
@@ -158,7 +144,7 @@ async def convert_image_to_3d_from_url(
         )
 
 
-@image_processing_router.post("/convert-to-3d/file/async", response_model=CreateTaskResponse)
+@image_processing_router.post("/convert-to-3d/file/preview/async", response_model=CreateTaskResponse)
 async def convert_image_to_3d_async(
     background_tasks: BackgroundTasks,
     image_file: UploadFile = File(..., description="Image file to convert to 3D"),
@@ -167,6 +153,7 @@ async def convert_image_to_3d_async(
         default="medium", description="Quality setting (low, medium, high)"
     ),
     user_id: str = Depends(auth_service.get_current_user_id),
+    background_processor: BackgroundProcessor = Depends(get_background_processor)
 ):
     """Create a background task to convert an image to 3D model.
     
@@ -218,7 +205,7 @@ async def convert_image_to_3d_async(
         )
 
 
-@image_processing_router.post("/convert-to-3d-from/url/async", response_model=CreateTaskResponse)
+@image_processing_router.post("/convert-to-3d-from/url/preview/async", response_model=CreateTaskResponse)
 async def convert_image_url_to_3d_async(
     background_tasks: BackgroundTasks,
     image_url: str = Form(..., description="URL of the image to convert to 3D"),
@@ -227,7 +214,9 @@ async def convert_image_url_to_3d_async(
         default="medium", description="Quality setting (low, medium, high)"
     ),
     user_id: str = Depends(auth_service.get_current_user_id),
-):
+    background_processor: BackgroundProcessor = Depends(get_background_processor)
+    
+):  
     """Create a background task to convert an image from URL to 3D model.
     
     Args:

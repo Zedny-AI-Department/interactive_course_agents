@@ -1,11 +1,12 @@
 import base64
 import mimetypes
+import tempfile
 from typing import Any, Dict, List
 import fal_client
 import os
 
 from src.constants import ImageDescriptionPrompt, ImageDescriptionWithCopyrightPrompt
-from src.models import ExtractedImage, LLMVisualContent, LLMVisualContentWithCopyright
+from src.models import ExtractedImage, LLMsearchedVisualContent, LLMVisualContentWithCopyright
 from src.services.llm_service import LLMService
 from src.utils import search_with_tavily
 from src.config import settings
@@ -18,7 +19,7 @@ class ImageProcessingService:
 
     async def search_images(
         self, original_images: List[ExtractedImage]
-    ) -> List[LLMVisualContent]:
+    ) -> List[LLMsearchedVisualContent]:
         processed_imgs = []
         for index, img in enumerate(original_images):
             # Decode image
@@ -29,7 +30,7 @@ class ImageProcessingService:
             formatted_prompt = self.llm_service.format_prompt(
                 system_message=ImageDescriptionPrompt.SYSTEM_PROMPT,
                 user_message=ImageDescriptionPrompt.USER_PROMPT,
-                output_schema=LLMVisualContent.model_json_schema(),
+                output_schema=LLMsearchedVisualContent.model_json_schema(),
                 additional_content=[
                     {
                         "type": "image_url",
@@ -38,10 +39,10 @@ class ImageProcessingService:
                 ],
             )
             try:
-                described_visual: LLMVisualContent = (
+                described_visual: LLMsearchedVisualContent = (
                     await self.llm_service.ask_openai_llm(
                         model_name="gpt-4o-mini",
-                        output_schema=LLMVisualContent,
+                        output_schema=LLMsearchedVisualContent,
                         prompt=formatted_prompt,
                     )
                 )
@@ -52,9 +53,9 @@ class ImageProcessingService:
                     )
                     described_data_json = described_visual.model_dump()
                     described_data_json["content"]["url"] = searched_img["images"][0]
-                    processed_img = LLMVisualContent(**described_data_json)
+                    processed_img = LLMsearchedVisualContent(**described_data_json)
                 else:
-                    processed_img = LLMVisualContent(**described_visual.model_dump())
+                    processed_img = LLMsearchedVisualContent(**described_visual.model_dump())
                 processed_imgs.append(processed_img)
             except Exception as e:
                 continue
@@ -127,14 +128,15 @@ class ImageProcessingService:
 
     async def convert_image_to_3d(
         self, 
-        image_path: str, 
+        image_bytes: bytes, 
+        image_name: str,
         geometry_format: str = "glb", 
         quality: str = "medium"
     ) -> Dict[str, Any]:
         """Convert image to 3D model using fal-ai/hyper3d/rodin.
         
         Args:
-            image_path: Path to the input image file
+            image_bytes: bytes of the input image file
             geometry_format: Output geometry format (default: "glb")
             material: Material type (default: "PBR")
             quality: Quality setting (default: "medium")
@@ -142,12 +144,18 @@ class ImageProcessingService:
         Returns:
             Dict containing the 3D conversion result
         """
+        # Create temporary file for the uploaded image
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=os.path.splitext(image_name or "image.jpg")[1]
+            ) as tmp_file:
+            tmp_file.write(image_bytes)
+            tmp_file_path = tmp_file.name
         try:
             print(1)
             os.environ["FAL_KEY"] = settings.FAL_KEY
             # Encode image as data URL for fal_client
             print(2)
-            image_data_url = fal_client.encode_file(image_path)
+            image_data_url = fal_client.encode_file(tmp_file_path)
             print(3, image_data_url)
             input_args = {
                 "input_image_urls": [image_data_url],
@@ -162,3 +170,8 @@ class ImageProcessingService:
             return result["model_mesh"]
         except Exception as e:
             raise Exception(f"Failed to convert image to 3D: {str(e)}")
+        
+        finally:
+            # Clean up temporary file
+            if os.path.exists(tmp_file_path):
+                os.unlink(tmp_file_path)

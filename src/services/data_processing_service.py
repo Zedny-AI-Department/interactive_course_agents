@@ -2,14 +2,15 @@ from typing import List
 from fastapi import UploadFile
 import string
 
-from src.services.file_processing_service import FileProcessingService
-from src.services.image_service import ImageProcessingService
+from src.models.llm_response_models import LLMGeneratedVisualItem
 from src.services import VideoService, SRTService, LLMService
+from src.services.storage_service import StorageService
+from src.services.image_service import ImageProcessingService as ImageService
+from src.services.file_processing_service import FileProcessingService as FileService
 from src.models import (
     LLMParagraphList,
     EducationalContent,
     ProcessedParagraph,
-    LLMVisualItem,
     VisualContent,
     WordTranscription,
     ParagraphItem,
@@ -18,11 +19,13 @@ from src.models import (
     VisualMapping,
     LLMParagraphWithVisual,
     WordTimestamp,
-    LLMVisualContent,
+    LLMsearchedVisualContent,
     LLMVisualContentWithCopyright,
+    StoredVisualContent,
     LLMParagraphWithVisualRef,
     AlignedParagraph,
 )
+from src.models.storage_models import ImageCreateSchema, ImageTypeEnum
 from src.constants import ParagraphAlignmentWithVisualPrompt, ParagraphWithVisualPrompt
 
 
@@ -49,8 +52,9 @@ class DataProcessingService:
         video_service: VideoService,
         srt_service: SRTService,
         llm_service: LLMService,
-        img_service: ImageProcessingService,
-        file_processing_service: FileProcessingService,
+        img_service: ImageService,
+        file_processing_service: FileService,
+        storage_service: StorageService,
     ):
         """Initialize the DataProcessingService with required dependencies.
 
@@ -60,12 +64,14 @@ class DataProcessingService:
             llm_service: Service for Large Language Model operations
             img_service: Service for image processing and search
             file_processing_service: Service for various file format processing
+            storage_service: Service for PDF and image storage operations
         """
         self.video_service = video_service
         self.srt_service = srt_service
         self.llm_service = llm_service
         self.img_service = img_service
         self.file_processing_service = file_processing_service
+        self.storage_service = storage_service
 
     async def generate_paragraphs_with_visuals(
         self, srt_file: UploadFile, media_file: UploadFile
@@ -110,8 +116,17 @@ class DataProcessingService:
         Raises:
             Exception: If generated paragraphs and aligned paragraphs lengths don't match
         """
+        # Store the PDF file first
+        pdf_bytes = await pdf_file.read()
+        pdf_file_id = await self._store_pdf_file(pdf_file.filename, pdf_bytes)
+
         srt_text = await self._extract_srt_text(srt_file)
-        processed_visuals = await self._extract_and_process_pdf_images(pdf_file)
+        processed_visuals = await self._extract_and_process_pdf_images(pdf_bytes)
+
+        # Store extracted images and update visuals with storage URLs
+        processed_visuals = await self._store_and_update_extracted_images(processed_visuals, pdf_file_id)
+        print("---------------------")
+        print(f"processed_visuals: {processed_visuals}")
 
         generated_output = await self._generate_paragraphs_with_visual_mapping(
             srt_text, processed_visuals
@@ -127,16 +142,21 @@ class DataProcessingService:
             video_paragraph_alignment_result=video_alignment_result,
             generated_output=aligned_paragraphs,
         )
-        return EducationalContent(paragraphs=combined_result)
+        return EducationalContent(paragraphs=combined_result, assist_file_id=str(pdf_file_id))
 
     async def extract_and_align_pdf_visuals_with_copyright_detection(
         self, srt_file: UploadFile, media_file: UploadFile, pdf_file: UploadFile
     ) -> EducationalContent:
         """Extract visuals from PDF with copyright detection and align them with paragraphs.
 
-        This pipeline analyzes images for copyright protection and handles them differently:
-        - Protected images: search for similar images online
-        - Unprotected images: use extracted images directly from PDF
+        For agents with assist files (PDFs):
+        - Store the PDF file
+        - For extracted images:
+          - For charts and tables: store with is_protected = false
+          - For images: if LLM returns is_protected = false, store with is_protected = false 
+            and no search_url, use original url as image url for paragraph visuals
+          - For images: if LLM returns is_protected = true, save with is_protected = true, 
+            with search_url and use search_url in paragraph visuals
 
         Args:
             srt_file: The subtitle file containing text transcriptions
@@ -149,11 +169,25 @@ class DataProcessingService:
         Raises:
             Exception: If generated paragraphs and aligned paragraphs lengths don't match
         """
+        print("*******************************")
+        # Store the PDF file and images
+        pdf_bytes = await pdf_file.read()
+        print("---------------------------------------")
+        pdf_file_id = await self._store_pdf_file(pdf_file.filename, pdf_bytes)
+        print("*******************************")
         srt_text = await self._extract_srt_text(srt_file)
-        processed_visuals = await self._extract_and_process_pdf_images_with_copyright(pdf_file)
-
-        generated_output = await self._generate_paragraphs_with_visual_mapping_for_copyright(
-            srt_text, processed_visuals
+        print("srt processed")
+        processed_visuals = await self._extract_and_process_pdf_images_with_copyright(
+            pdf_bytes
+        )
+        # Store extracted images and update visuals with storage URLs
+        processed_visuals = await self._store_and_update_extracted_images(processed_visuals, pdf_file_id)
+        print("---------------------")
+        print(f"processed_visuals: {processed_visuals}")
+        generated_output = (
+            await self._generate_paragraphs_with_visual_mapping_for_copyright(
+                srt_text, processed_visuals
+            )
         )
         aligned_paragraphs = self._match_paragraphs_to_extracted_visuals_with_copyright(
             generated_output=generated_output, processed_visuals=processed_visuals
@@ -166,7 +200,8 @@ class DataProcessingService:
             video_paragraph_alignment_result=video_alignment_result,
             generated_output=aligned_paragraphs,
         )
-        return EducationalContent(paragraphs=combined_result)
+
+        return EducationalContent(paragraphs=combined_result, assist_file_id=str(pdf_file_id))
 
     async def _extract_srt_text(self, srt_file: UploadFile) -> str:
         """Extract text content from SRT file.
@@ -204,8 +239,8 @@ class DataProcessingService:
         )
 
     async def _extract_and_process_pdf_images(
-        self, pdf_file: UploadFile
-    ) -> List[LLMVisualContent]:
+        self, file_bytes: bytes
+    ) -> List[LLMsearchedVisualContent]:
         """Extract images from PDF file and process them for search.
 
         Args:
@@ -214,14 +249,13 @@ class DataProcessingService:
         Returns:
             List[SearchedImageVisualModel]: Processed visual models ready for alignment
         """
-        pdf_bytes = await pdf_file.read()
         extracted_visuals = self.file_processing_service.extract_images_from_pdf(
-            pdf_bytes=pdf_bytes
+            pdf_bytes=file_bytes
         )
         return await self.img_service.search_images(original_images=extracted_visuals)
 
     async def _extract_and_process_pdf_images_with_copyright(
-        self, pdf_file: UploadFile
+        self, file_bytes: bytes,
     ) -> List[LLMVisualContentWithCopyright]:
         """Extract images from PDF file and process them with copyright detection.
 
@@ -231,16 +265,15 @@ class DataProcessingService:
         Returns:
             List[LLMVisualContentWithCopyright]: Processed visual models with copyright info
         """
-        pdf_bytes = await pdf_file.read()
         extracted_visuals = self.file_processing_service.extract_images_from_pdf(
-            pdf_bytes=pdf_bytes
+            pdf_bytes=file_bytes
         )
         return await self.img_service.search_images_with_copyright_detection(
             original_images=extracted_visuals
         )
 
     async def _generate_paragraphs_with_visual_mapping(
-        self, srt_text: str, processed_visuals: List[LLMVisualContent]
+        self, srt_text: str, processed_visuals: List[LLMsearchedVisualContent]
     ) -> LLMVisualAlignmentResult:
         """Generate paragraphs with visual alignment mapping.
 
@@ -445,7 +478,7 @@ class DataProcessingService:
 
     def _map_visual_to_word_timestamps(
         self,
-        visual_model: LLMVisualItem,
+        visual_model: LLMGeneratedVisualItem,
         paragraph_words: List[WordTranscription],
     ) -> VisualContent:
         """Map visual elements to precise word timestamps within paragraphs.
@@ -465,10 +498,13 @@ class DataProcessingService:
             if self._words_match_at_position(
                 cleaned_visual_words, paragraph_words, index
             ):
+                # Get assist_image_id from visual_model if it exists
+                assist_image_id = getattr(visual_model, '_assist_image_id', None)
                 return VisualContent(
                     type=visual_model.type,
                     content=visual_model.content,
                     start_time=paragraph_words[index].start,
+                    assist_image_id=assist_image_id,
                 )
         return None
 
@@ -509,7 +545,7 @@ class DataProcessingService:
     def _match_paragraphs_to_extracted_visuals(
         self,
         generated_output: LLMVisualAlignmentResult,
-        processed_visuals: List[LLMVisualContent],
+        processed_visuals: List[StoredVisualContent],
     ) -> LLMParagraphList:
         """Match generated paragraphs with their corresponding extracted visuals.
 
@@ -535,7 +571,7 @@ class DataProcessingService:
     def _match_paragraphs_to_extracted_visuals_with_copyright(
         self,
         generated_output: LLMVisualAlignmentResult,
-        processed_visuals: List[LLMVisualContentWithCopyright],
+        processed_visuals: List[StoredVisualContent],
     ) -> LLMParagraphList:
         """Match generated paragraphs with their corresponding copyright-aware visuals.
 
@@ -552,14 +588,16 @@ class DataProcessingService:
                 aligned_visual = self._find_matching_visual_with_copyright(
                     paragraph.visual_reference.visual_index, processed_visuals
                 )
-                aligned_paragraph = self._create_aligned_paragraph_with_copyright_visual(
-                    paragraph, aligned_visual
+                aligned_paragraph = (
+                    self._create_aligned_paragraph_with_copyright_visual(
+                        paragraph, aligned_visual
+                    )
                 )
                 aligned_result.append(aligned_paragraph)
         return LLMParagraphList(paragraphs=aligned_result)
 
     def _find_matching_visual(
-        self, visual_index: int, processed_visuals: List[LLMVisualContent]
+        self, visual_index: int, processed_visuals: List[StoredVisualContent]
     ):
         """Find the visual that matches the given visual index.
 
@@ -580,7 +618,7 @@ class DataProcessingService:
         )
 
     def _create_aligned_paragraph_with_visual(
-        self, paragraph: LLMParagraphWithVisualRef, aligned_visual: LLMVisualContent
+        self, paragraph: LLMParagraphWithVisualRef, aligned_visual: StoredVisualContent
     ) -> LLMParagraphWithVisual:
         """Create an aligned paragraph with its associated visual.
 
@@ -591,11 +629,13 @@ class DataProcessingService:
         Returns:
             GeneratedParagraphWithVisualModel: Paragraph with aligned visual
         """
-        new_aligned_visual = LLMVisualItem(
+        new_aligned_visual = LLMGeneratedVisualItem(
             type=aligned_visual.type,
             content=aligned_visual.content,
             start_sentence=paragraph.visual_reference.start_sentence,
         )
+        # Store assist_image_id separately for later use
+        new_aligned_visual._assist_image_id = aligned_visual.assist_image_id
         aligned_paragraph = LLMParagraphWithVisual(
             paragraph_index=paragraph.paragraph_index,
             paragraph_text=paragraph.paragraph_text,
@@ -605,7 +645,7 @@ class DataProcessingService:
         return aligned_paragraph
 
     def _find_matching_visual_with_copyright(
-        self, visual_index: int, processed_visuals: List[LLMVisualContentWithCopyright]
+        self, visual_index: int, processed_visuals: List[StoredVisualContent]
     ):
         """Find the copyright-aware visual that matches the given visual index.
 
@@ -626,7 +666,9 @@ class DataProcessingService:
         )
 
     def _create_aligned_paragraph_with_copyright_visual(
-        self, paragraph: LLMParagraphWithVisualRef, aligned_visual: LLMVisualContentWithCopyright
+        self,
+        paragraph: LLMParagraphWithVisualRef,
+        aligned_visual: StoredVisualContent,
     ) -> LLMParagraphWithVisual:
         """Create an aligned paragraph with its associated copyright-aware visual.
 
@@ -637,11 +679,13 @@ class DataProcessingService:
         Returns:
             LLMParagraphWithVisual: Paragraph with aligned visual
         """
-        new_aligned_visual = LLMVisualItem(
+        new_aligned_visual = LLMGeneratedVisualItem(
             type=aligned_visual.type,
             content=aligned_visual.content,
             start_sentence=paragraph.visual_reference.start_sentence,
         )
+        # Store assist_image_id separately for later use  
+        new_aligned_visual._assist_image_id = aligned_visual.assist_image_id
         aligned_paragraph = LLMParagraphWithVisual(
             paragraph_index=paragraph.paragraph_index,
             paragraph_text=paragraph.paragraph_text,
@@ -649,6 +693,122 @@ class DataProcessingService:
             visuals=new_aligned_visual.model_dump(),
         )
         return aligned_paragraph
+
+    async def _store_pdf_file(self, filename: str, pdf_bytes: bytes) -> str:
+        """Store PDF file and return file ID.
+        
+        Args:
+            filename: Name of the PDF file
+            pdf_bytes: PDF file bytes
+            
+        Returns:
+            str: File ID of the stored PDF
+        """
+        print(11)
+        file_types = await self.storage_service.get_file_types()
+        print(file_types)
+        pdf_file_type_id = next(
+            (str(ft.id) for ft in file_types.file_types if ft.name.lower() == "pdf"), 
+            None
+        )
+        print(pdf_file_type_id)
+        if not pdf_file_type_id:
+            raise ValueError("PDF file type not found in storage system")
+            
+        return await self.storage_service.save_file_via_api(
+            file_bytes=pdf_bytes,
+            file_name=filename,
+            file_type_id=str(pdf_file_type_id),
+            content_type="application/pdf"
+        )
+
+    async def _store_and_update_extracted_images(self, processed_visuals, pdf_file_id: str) -> List[StoredVisualContent]:
+        """Store extracted images and return stored visual content models.
+        
+        Args:
+            processed_visuals: List of processed visual models with copyright info
+            pdf_file_id: ID of the parent PDF file
+            
+        Returns:
+            List of StoredVisualContent with assist_image_id and storage URLs
+        """
+        updated_visuals = []
+        
+        for visual in processed_visuals:
+            # Determine image type and protection status
+            image_type = self._map_visual_type_to_file_type(visual.type)
+            is_protected = visual.is_protected if hasattr(visual, 'is_protected') else None
+            
+            # For charts and tables, always set is_protected = false
+            if visual.type in ["chart", "table"]:
+                is_protected = None
+            
+            # Create image schema 
+            search_url = None
+            if is_protected and visual.type == "image":
+                # For protected images, get the search URL from content
+                if hasattr(visual.content, 'url'):
+                    search_url = visual.content.url
+            
+            # image title
+            image_data = ImageCreateSchema(
+                file_id=str(pdf_file_id),
+                image_title=visual.content.title,
+                proposed_image_type=image_type,
+                is_protected=is_protected,
+                searched_image_url=search_url,
+                description=visual.description
+            )
+            print(f"image_data: {image_data}")
+            # Store the image
+            stored_image = await self.storage_service.save_image_via_api(
+                image_data=image_data,
+                image_bytes=visual.image_bytes if hasattr(visual, 'image_bytes') else b'',
+                image_name=f"{visual.type}_{visual.visual_index}.jpg",
+                content_type="image/jpeg"
+            )
+            
+            # Update visual content URL based on protection status
+            updated_content = visual.content
+            print("-----------, content", is_protected)
+            print(f"updated_content: {visual}")
+            print(f"stored_image: {stored_image.original_image_url}")
+
+            if is_protected is None or is_protected is True:
+                pass
+            elif is_protected is False and visual.type == "image" :
+                print("t")
+                updated_content.url = stored_image.original_image_url                    
+            
+            # Create StoredVisualContent with assist_image_id
+            stored_visual = StoredVisualContent(
+                type=visual.type,
+                content=updated_content,
+                visual_index=visual.visual_index,
+                description=visual.description,
+                assist_image_id=str(stored_image.id),
+                is_protected=is_protected if hasattr(visual, 'is_protected') else None
+            )
+                
+            updated_visuals.append(stored_visual)
+            
+        return updated_visuals
+
+    def _map_visual_type_to_file_type(self, visual_type: str) -> ImageTypeEnum:
+        """Map visual type to FileImageTypeEnum.
+        
+        Args:
+            visual_type: Type of visual ("chart", "table", "image")
+            
+        Returns:
+            FileImageTypeEnum: Corresponding enum value
+        """
+        type_mapping = {
+            "chart": ImageTypeEnum.CHART,
+            "table": ImageTypeEnum.TABLE,
+            "image": ImageTypeEnum.IMAGE
+        }
+        return type_mapping.get(visual_type, ImageTypeEnum.IMAGE)
 
     @staticmethod
     def _clean_text(text: str) -> str:
@@ -663,3 +823,4 @@ class DataProcessingService:
         punctuation_table = str.maketrans("", "", string.punctuation)
         cleaned_text = text.translate(punctuation_table)
         return cleaned_text.lower()
+    

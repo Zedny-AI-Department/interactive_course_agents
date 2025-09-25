@@ -6,6 +6,7 @@ timing information.
 """
 
 from typing import Annotated, List, Literal, Optional, Union
+from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 
 from .base_models import StrictBaseModel
@@ -125,6 +126,7 @@ class VisualContent(BaseModel):
         type: The type of visual content contained
         content: The actual visual content (chart, image, or table)
         start_time: When this visual should appear (in seconds)
+        assist_image_id: ID of the stored image for visual content
     """
 
     type: Literal["chart", "image", "table"] = Field(
@@ -134,6 +136,7 @@ class VisualContent(BaseModel):
         Union[ChartContent, ImageContent, TableContent], Field(discriminator="type")
     ] = Field(description="The actual visual content")
     start_time: float = Field(description="When this visual appears in seconds")
+    assist_image_id: Optional[UUID] = Field(default=None, description="ID of the stored image for visual content")
 
 
 class ExtractedImage(BaseModel):
@@ -169,16 +172,16 @@ class VisualMapping(StrictBaseModel):
 
 
 class LLMImageContent(BaseModel):
-    """Represents image content with metadata.
+    """Represents image content with metadata for LLM processing.
 
-    Used for static images that are part of the educational content,
-    including proper accessibility attributes.
+    Used for static images that are part of the educational content during
+    LLM processing, before they are stored and get URLs.
 
     Attributes:
         type: Always "image" for discriminator purposes
-        url: Image URL or file path
         title: Descriptive title for the image
         alt_text: Accessibility text for screen readers
+        url: Optional URL for the image (populated after storage)
     """
 
     type: Literal["image"] = Field(
@@ -188,9 +191,12 @@ class LLMImageContent(BaseModel):
     alt_text: Optional[str] = Field(
         default=None, description="Alternative text for accessibility"
     )
+    url: Optional[str] = Field(
+        default=None, description="The URL of the image after storage"
+    )
 
 
-class LLMVisualContent(BaseModel):
+class LLMsearchedVisualContent(BaseModel):
     """Container for any type of visual content with timing.
 
     This is the main visual content model that can contain any type
@@ -200,7 +206,9 @@ class LLMVisualContent(BaseModel):
     Attributes:
         type: The type of visual content contained
         content: The actual visual content (chart, image, or table)
-        start_time: When this visual should appear (in seconds)
+        visual_index: Index reference to the visual
+        description: Description of the visual content
+        assist_image_id: ID of the stored image for visual content
     """
 
     type: Literal["chart", "image", "table"] = Field(
@@ -213,10 +221,10 @@ class LLMVisualContent(BaseModel):
     description: str = Field(description="Description of the visual content")
 
 
-class LLMVisualContentWithCopyright(BaseModel):
+class LLMVisualContentWithCopyright(LLMsearchedVisualContent):
     """Container for visual content with copyright assessment.
 
-    Extended version of LLMVisualContent that includes copyright protection
+    Extended version of LLMsearchedVisualContent that includes copyright protection
     information for handling protected vs unprotected images.
 
     Attributes:
@@ -225,14 +233,24 @@ class LLMVisualContentWithCopyright(BaseModel):
         visual_index: Index reference to the visual
         description: Description of the visual content
         is_protected: Whether the content is protected by copyright
+        assist_image_id: ID of the stored image for visual content
     """
-
-    type: Literal["chart", "image", "table"] = Field(
-        description="The type of visual content"
-    )
-    content: ChartContent | ImageContent | TableContent = Field(
-        description="The actual visual content"
-    )
-    visual_index: int = Field(description="Index reference to the visual")
-    description: str = Field(description="Description of the visual content")
     is_protected: bool = Field(description="Whether content is copyright protected")
+
+
+class StoredVisualContent(LLMVisualContentWithCopyright):
+    """Container for stored visual content with assist_image_id.
+
+    This model represents visual content after it has been processed and stored,
+    containing the assist_image_id for reference to the stored image.
+
+    Attributes:
+        type: The type of visual content contained
+        content: The actual visual content (chart, image, or table)
+        visual_index: Index reference to the visual
+        description: Description of the visual content
+        assist_image_id: ID of the stored image for visual content
+        is_protected: Whether the content is protected by copyright (optional)
+    """
+    is_protected: Optional[bool] = Field(default=None, description="Whether content is copyright protected")
+    assist_image_id: Optional[UUID] = Field(default=None, description="ID of the stored image for visual content")

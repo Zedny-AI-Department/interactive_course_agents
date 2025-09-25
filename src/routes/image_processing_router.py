@@ -4,11 +4,14 @@ import tempfile
 import os
 import httpx
 
+from src.services.storage_service import StorageService
 from src.services.background_processor import BackgroundProcessor
 from src.services.image_service import ImageProcessingService
 from src.services import auth_service, task_manager
 from src.models.task_models import CreateTaskResponse
-from src.container import get_background_processor, get_image_service
+from src.container import get_background_processor, get_image_service, get_storage_service
+from src.constants import StorageAPIRoutes
+from src.config import settings
 
 
 image_processing_router = APIRouter(prefix="/image", tags=["image"])
@@ -254,4 +257,51 @@ async def convert_image_url_to_3d_async(
         raise HTTPException(
             status_code=500,
             detail=f"An error occurred while creating the 3D conversion task from URL: {str(e)}",
+        )
+
+
+@image_processing_router.post("/convert-to-3d/submit/")
+async def convert_to_3d_submit(
+    image_3d_file: UploadFile = File(..., description="3D image file to submit"),
+    assist_image_id: str = Form(..., description="Assist image ID from stored image"),
+    service: StorageService = Depends(get_storage_service)
+) -> Dict[str, Any]:
+    """Submit a 3D image for an existing assist image.
+
+    Args:
+        image_3d_file: The 3D image file to submit
+        assist_image_id: The ID of the existing assist image
+
+    Returns:
+        Dict containing the submission result with 3D image URL
+    """
+    try:
+        # Validate file type
+        if not image_3d_file.content_type or not image_3d_file.content_type.startswith("application/octet-stream"):
+            raise HTTPException(status_code=400, detail="File must be an image")
+
+        # Read the 3D image file
+        image_3d_bytes = await image_3d_file.read()
+
+        image_3d_url = await service.update_image_with_3d_via_api(image_3d_bytes=image_3d_bytes, 
+                                                            image_3d_name=image_3d_file.filename, 
+                                                            image_3d_content_type=image_3d_file.content_type, 
+                                                            assist_image_id=assist_image_id)
+        
+        # Return the response with 3D image URL
+        return {
+            "message": "3D image submitted successfully",
+            "assist_image_id": assist_image_id,
+            "image_3d_url": image_3d_url
+        }
+        
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=f"API call failed: {e.response.text}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while submitting 3D image: {str(e)}"
         )

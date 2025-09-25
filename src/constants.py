@@ -2,6 +2,7 @@ class StorageAPIRoutes:
     FILES = "/assist-files/"
     IMAGES = "/assist-images/"
     FILE_TYPES = "/assist-files/types/"
+    IMAGE_3D = "/assist-images/{image_id}/3d-image/"
 
 
 class ParagraphWithVisualPrompt:

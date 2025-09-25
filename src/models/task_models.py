@@ -20,6 +20,12 @@ class TaskStage(str, Enum):
     COMPLETED = "completed"
 
 
+class AgentMode(str, Enum):
+    GENERATE = "generate"
+    ALWAYS_SEARCH = "always_search"
+    SEARCH_FOR_COPYRIGHT = "search_for_copyright"
+
+
 class TaskData(BaseModel):
     task_id: str
     user_id: str

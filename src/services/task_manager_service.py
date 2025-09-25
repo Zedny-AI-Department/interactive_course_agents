@@ -21,7 +21,7 @@ class TaskManagerService:
             self.redis = await redis_service.get_redis()
         return self.redis
     
-    async def create_task(self, user_id: str, task_type: str = "process_srt_media") -> str:
+    async def create_task(self, user_id: str, task_type: Optional[str] = "process_data") -> str:
         """Create a new background task for a user."""
         redis_client = await self._get_redis()
         

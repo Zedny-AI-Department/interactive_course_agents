@@ -12,7 +12,7 @@ from src.services.data_processing_service import DataProcessingService
 from src.services.background_processor import BackgroundProcessor
 from src.container import get_data_processing_service, get_background_processor
 from src.models import EducationalContent
-from src.models.task_models import CreateTaskResponse, TaskResponse, UserTasksResponse
+from src.models.task_models import CreateTaskResponse, TaskResponse, UserTasksResponse, AgentMode
 from src.services import task_manager, auth_service
 
 
@@ -22,6 +22,83 @@ task_router = APIRouter(prefix="/task", tags=["tasks"])
 # Endpoints
 
 # Background task endpoints
+
+@data_processing_router.post("/process-async", response_model=CreateTaskResponse)
+async def create_general_processing_task(
+    background_tasks: BackgroundTasks,
+    srt_file: UploadFile = File(..., description="SRT subtitle file"),
+    media_file: UploadFile = File(..., description="Art/media file (video, audio, etc.)"),
+    agent_mode: AgentMode = Query(..., description="Agent processing mode"),
+    pdf_file: UploadFile = File(None, description="Optional PDF assistance file"),
+    user_id: str = Depends(auth_service.get_current_user_id),
+    background_processor: BackgroundProcessor = Depends(get_background_processor)
+):
+    """Create a background task for general data processing with different agent modes."""
+    try:
+        task_id = await task_manager.create_task(user_id)
+
+        # Read file contents
+        srt_content = await srt_file.read()
+        media_content = await media_file.read()
+
+        # Handle different agent modes
+        if agent_mode == AgentMode.GENERATE:
+            # For generate mode, PDF is not required
+            background_tasks.add_task(
+                background_processor.generate_paragraphs_with_visuals_task,
+                task_id,
+                srt_content,
+                srt_file.filename,
+                media_content,
+                media_file.filename,
+                media_file.content_type,
+            )
+        else:
+            # For search modes, PDF is required
+            if not pdf_file:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="PDF file is required for search agent modes"
+                )
+            
+            pdf_content = await pdf_file.read()
+            
+            if agent_mode == AgentMode.ALWAYS_SEARCH:
+                background_tasks.add_task(
+                    background_processor.extract_and_align_pdf_visuals_task,
+                    task_id,
+                    srt_content,
+                    srt_file.filename,
+                    media_content,
+                    media_file.filename,
+                    pdf_content,
+                    pdf_file.filename,
+                )
+            elif agent_mode == AgentMode.SEARCH_FOR_COPYRIGHT:
+                background_tasks.add_task(
+                    background_processor.extract_and_align_pdf_visuals_with_copyright_task,
+                    task_id,
+                    srt_content,
+                    srt_file.filename,
+                    media_content,
+                    media_file.filename,
+                    pdf_content,
+                    pdf_file.filename,
+                )
+
+        return CreateTaskResponse(
+            task_id=task_id,
+            status="pending",
+            message="Task created successfully. Use the task_id to track progress.",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while creating the task: {str(e)}",
+        )
 
 
 @data_processing_router.post("/generate-async", response_model=CreateTaskResponse)

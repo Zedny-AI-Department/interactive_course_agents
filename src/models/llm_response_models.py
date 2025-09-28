@@ -32,6 +32,9 @@ class LLMGeneratedVisualItem(StrictBaseModel):
     start_sentence: str = Field(
         description="The sentence that should trigger this visual to appear",
     )
+    assist_image_id: Optional[str] = Field(
+        default=None, description="ID of the stored image for visual content"
+    )
 
 
 class LLMParagraphBase(StrictBaseModel):

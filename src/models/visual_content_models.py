@@ -7,7 +7,7 @@ timing information.
 
 from typing import Annotated, List, Literal, Optional, Union
 from uuid import UUID
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .base_models import StrictBaseModel
 
@@ -137,6 +137,25 @@ class VisualContent(BaseModel):
     ] = Field(description="The actual visual content")
     start_time: float = Field(description="When this visual appears in seconds")
     assist_image_id: Optional[UUID] = Field(default=None, description="ID of the stored image for visual content")
+
+
+class SearchAgentVisualContent(VisualContent):
+    """Visual content specifically from search agents that must have assist_image_id.
+    
+    This model ensures that visual content from search/copyright agents always
+    includes the assist_image_id field, which is required for proper functionality.
+    """
+    
+    assist_image_id: UUID = Field(..., description="Required ID of the stored image for search agent visuals")
+    
+    @model_validator(mode='before')
+    def validate_assist_image_id_exists(cls, values):
+        """Ensure assist_image_id is present for search agent visuals."""
+        if isinstance(values, dict):
+            assist_image_id = values.get('assist_image_id')
+            if assist_image_id is None:
+                raise ValueError("assist_image_id is required for search agent visual content")
+        return values
 
 
 class ExtractedImage(BaseModel):

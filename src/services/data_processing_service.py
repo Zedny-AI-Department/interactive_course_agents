@@ -25,6 +25,7 @@ from src.models import (
     LLMParagraphWithVisualRef,
     AlignedParagraph,
 )
+from src.models.visual_content_models import SearchAgentVisualContent
 from src.models.storage_models import ImageCreateSchema, ImageTypeEnum
 from src.constants import ParagraphAlignmentWithVisualPrompt, ParagraphWithVisualPrompt
 
@@ -74,7 +75,7 @@ class DataProcessingService:
         self.storage_service = storage_service
 
     async def generate_paragraphs_with_visuals(
-        self, srt_file: UploadFile, media_file: UploadFile
+        self, srt_file: UploadFile, media_file: UploadFile, video_metadata
     ) -> EducationalContent:
         """Generate paragraphs with visual elements from SRT and media files.
 
@@ -98,10 +99,10 @@ class DataProcessingService:
             video_paragraph_alignment_result=video_alignment_result,
             generated_output=generated_output,
         )
-        return EducationalContent(paragraphs=combined_result)
+        return EducationalContent(paragraphs=combined_result, video_metadata=video_metadata)
 
     async def extract_and_align_pdf_visuals(
-        self, srt_file: UploadFile, media_file: UploadFile, pdf_file: UploadFile
+        self, srt_file: UploadFile, media_file: UploadFile, pdf_file: UploadFile, video_metadata
     ) -> EducationalContent:
         """Extract visuals from PDF and align them with paragraphs from SRT and media files.
 
@@ -141,11 +142,12 @@ class DataProcessingService:
         combined_result = self._merge_video_alignment_with_generated_paragraphs(
             video_paragraph_alignment_result=video_alignment_result,
             generated_output=aligned_paragraphs,
+            is_search_agent=True,
         )
-        return EducationalContent(paragraphs=combined_result, assist_file_id=str(pdf_file_id))
+        return EducationalContent(paragraphs=combined_result, video_metadata=video_metadata, assist_file_id=str(pdf_file_id))
 
     async def extract_and_align_pdf_visuals_with_copyright_detection(
-        self, srt_file: UploadFile, media_file: UploadFile, pdf_file: UploadFile
+        self, srt_file: UploadFile, media_file: UploadFile, pdf_file: UploadFile, video_metadata
     ) -> EducationalContent:
         """Extract visuals from PDF with copyright detection and align them with paragraphs.
 
@@ -199,9 +201,10 @@ class DataProcessingService:
         combined_result = self._merge_video_alignment_with_generated_paragraphs(
             video_paragraph_alignment_result=video_alignment_result,
             generated_output=aligned_paragraphs,
+            is_search_agent=True,
         )
 
-        return EducationalContent(paragraphs=combined_result, assist_file_id=str(pdf_file_id))
+        return EducationalContent(paragraphs=combined_result, video_metadata=video_metadata, assist_file_id=str(pdf_file_id))
 
     async def _extract_srt_text(self, srt_file: UploadFile) -> str:
         """Extract text content from SRT file.
@@ -372,6 +375,7 @@ class DataProcessingService:
         self,
         video_paragraph_alignment_result: MediaAlignmentResult,
         generated_output: LLMParagraphList,
+        is_search_agent: bool = False,
         # external_visuals: List[VisualContent] = None,
     ) -> List[ProcessedParagraph]:
         """Merge video alignment results with generated paragraph content.
@@ -400,7 +404,7 @@ class DataProcessingService:
                 paragraph.paragraph_index, video_paragraph_alignment_result.result
             )
             processed_visual_model = self._process_paragraph_visuals(
-                paragraph, aligned_paragraph
+                paragraph, aligned_paragraph, is_search_agent
             )
             processed_paragraph = self._create_processed_paragraph(
                 paragraph, aligned_paragraph, processed_visual_model
@@ -430,7 +434,7 @@ class DataProcessingService:
         )
 
     def _process_paragraph_visuals(
-        self, paragraph: LLMParagraphWithVisual, aligned_paragraph: AlignedParagraph
+        self, paragraph: LLMParagraphWithVisual, aligned_paragraph: AlignedParagraph, is_search_agent: bool = False
     ):
         """Process visual data for a paragraph if it exists.
 
@@ -445,6 +449,7 @@ class DataProcessingService:
             return self._map_visual_to_word_timestamps(
                 visual_model=paragraph.visuals,
                 paragraph_words=aligned_paragraph.paragraph_words,
+                is_search_agent=is_search_agent,
             )
         return None
 
@@ -480,6 +485,7 @@ class DataProcessingService:
         self,
         visual_model: LLMGeneratedVisualItem,
         paragraph_words: List[WordTranscription],
+        is_search_agent: bool = False,
     ) -> VisualContent:
         """Map visual elements to precise word timestamps within paragraphs.
 
@@ -498,14 +504,27 @@ class DataProcessingService:
             if self._words_match_at_position(
                 cleaned_visual_words, paragraph_words, index
             ):
-                # Get assist_image_id from visual_model if it exists
-                assist_image_id = getattr(visual_model, '_assist_image_id', None)
-                return VisualContent(
-                    type=visual_model.type,
-                    content=visual_model.content,
-                    start_time=paragraph_words[index].start,
-                    assist_image_id=assist_image_id,
-                )
+                # Convert assist_image_id to UUID if it's a string
+                assist_image_id = None
+                if visual_model.assist_image_id:
+                    from uuid import UUID
+                    assist_image_id = UUID(visual_model.assist_image_id) if isinstance(visual_model.assist_image_id, str) else visual_model.assist_image_id
+                
+                # Use SearchAgentVisualContent for search agents to ensure validation
+                if is_search_agent and assist_image_id:
+                    return SearchAgentVisualContent(
+                        type=visual_model.type,
+                        content=visual_model.content,
+                        start_time=paragraph_words[index].start,
+                        assist_image_id=assist_image_id,
+                    )
+                else:
+                    return VisualContent(
+                        type=visual_model.type,
+                        content=visual_model.content,
+                        start_time=paragraph_words[index].start,
+                        assist_image_id=assist_image_id,
+                    )
         return None
 
     def _prepare_visual_start_words(self, start_sentence: str) -> List[str]:
@@ -633,9 +652,8 @@ class DataProcessingService:
             type=aligned_visual.type,
             content=aligned_visual.content,
             start_sentence=paragraph.visual_reference.start_sentence,
+            assist_image_id=str(aligned_visual.assist_image_id),
         )
-        # Store assist_image_id separately for later use
-        new_aligned_visual._assist_image_id = aligned_visual.assist_image_id
         aligned_paragraph = LLMParagraphWithVisual(
             paragraph_index=paragraph.paragraph_index,
             paragraph_text=paragraph.paragraph_text,
@@ -683,9 +701,8 @@ class DataProcessingService:
             type=aligned_visual.type,
             content=aligned_visual.content,
             start_sentence=paragraph.visual_reference.start_sentence,
+            assist_image_id=str(aligned_visual.assist_image_id),
         )
-        # Store assist_image_id separately for later use  
-        new_aligned_visual._assist_image_id = aligned_visual.assist_image_id
         aligned_paragraph = LLMParagraphWithVisual(
             paragraph_index=paragraph.paragraph_index,
             paragraph_text=paragraph.paragraph_text,

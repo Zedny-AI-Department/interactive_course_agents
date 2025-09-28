@@ -335,7 +335,6 @@ async def get_task_result(
             "task_id": task_id,
             "status": task_data.status,
             "result": task_data.result,
-            "video_metadata": task_data.video_metadata
         }
 
     except HTTPException:
@@ -424,11 +423,9 @@ async def generate_educational_content(
         
         # Align paragraphs with audio
         result = await data_processing_service.generate_paragraphs_with_visuals(
-            media_file=media_file, srt_file=srt_file
+            media_file=media_file, srt_file=srt_file, video_metadata=video_metadata
         )
         
-        # Add course metadata to result
-        result.video_metadata = video_metadata
         return result
     except Exception as e:
         raise HTTPException(
@@ -459,11 +456,9 @@ async def extract_pdf_visuals_and_align(
         
         # Align paragraphs with audio
         result = await data_processing_service.extract_and_align_pdf_visuals(
-            media_file=media_file, srt_file=srt_file, pdf_file=pdf_file
+            media_file=media_file, srt_file=srt_file, pdf_file=pdf_file, video_metadata=video_metadata
         )
         
-        # Add course metadata to result
-        result.video_metadata = video_metadata
         return result
     except Exception as e:
         raise HTTPException(
@@ -496,11 +491,9 @@ async def extract_pdf_visuals_with_copyright_and_align(
         
         # Align paragraphs with audio
         result = await data_processing_service.extract_and_align_pdf_visuals_with_copyright_detection(
-            media_file=media_file, srt_file=srt_file, pdf_file=pdf_file
+            media_file=media_file, srt_file=srt_file, pdf_file=pdf_file, video_metadata=video_metadata
         )
         
-        # Add course metadata to result
-        result.video_metadata = video_metadata
         return result
     except Exception as e:
         raise HTTPException(

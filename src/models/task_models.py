@@ -1,5 +1,6 @@
 from typing import Optional, Dict, Any
 from datetime import datetime
+from uuid import UUID
 from pydantic import BaseModel, Field
 from enum import Enum
 
@@ -27,8 +28,8 @@ class AgentMode(str, Enum):
 
 
 class VideoMetadata(BaseModel):
-    course_id: str = Field(..., description="Course identifier")
-    chapter_id: str = Field(..., description="Chapter identifier")
+    course_id: UUID = Field(..., description="Course identifier")
+    chapter_id: UUID = Field(..., description="Chapter identifier")
     video_name: str = Field(..., description="Video name")
     agent_mode: AgentMode = Field(..., description="Processing mode used")
 

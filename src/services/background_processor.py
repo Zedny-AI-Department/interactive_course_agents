@@ -29,6 +29,10 @@ class BackgroundProcessor:
     ):
         """Process SRT and media files to generate paragraphs with visuals in background."""
         try:
+            # Get task data to retrieve video metadata
+            task_data = await task_manager.get_task_status(task_id)
+            video_metadata = task_data.video_metadata if task_data else None
+            
             # Update task status to processing
             await task_manager.update_task_status(
                 task_id, TaskStatus.PROCESSING, TaskStage.TRANSCRIBING, progress=10
@@ -72,7 +76,7 @@ class BackgroundProcessor:
 
                     # Process the files
                     result = await self.data_processing_service.generate_paragraphs_with_visuals(
-                        media_file=media_upload, srt_file=srt_upload
+                        media_file=media_upload, srt_file=srt_upload, video_metadata=video_metadata
                     )
 
                     # Convert result to dict for JSON storage
@@ -122,6 +126,10 @@ class BackgroundProcessor:
     ):
         """Extract and align PDF visuals with SRT and media files in background."""
         try:
+            # Get task data to retrieve video metadata
+            task_data = await task_manager.get_task_status(task_id)
+            video_metadata = task_data.video_metadata if task_data else None
+            
             # Update task status to processing
             await task_manager.update_task_status(
                 task_id, TaskStatus.PROCESSING, TaskStage.TRANSCRIBING, progress=10
@@ -174,6 +182,7 @@ class BackgroundProcessor:
                         media_file=media_upload,
                         srt_file=srt_upload,
                         pdf_file=pdf_upload,
+                        video_metadata=video_metadata,
                     )
 
                     # Convert result to dict for JSON storage
@@ -225,6 +234,10 @@ class BackgroundProcessor:
     ):
         """Extract and align PDF visuals with copyright detection in background."""
         try:
+            # Get task data to retrieve video metadata
+            task_data = await task_manager.get_task_status(task_id)
+            video_metadata = task_data.video_metadata if task_data else None
+            
             # Update task status to processing
             await task_manager.update_task_status(
                 task_id, TaskStatus.PROCESSING, TaskStage.TRANSCRIBING, progress=10
@@ -277,6 +290,7 @@ class BackgroundProcessor:
                         media_file=media_upload,
                         srt_file=srt_upload,
                         pdf_file=pdf_upload,
+                        video_metadata=video_metadata,
                     )
 
                     # Convert result to dict for JSON storage

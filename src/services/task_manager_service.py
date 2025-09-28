@@ -5,7 +5,7 @@ from typing import List, Optional, Dict, Any
 from fastapi import HTTPException
 
 from src.services.redis_service import redis_service
-from src.models.task_models import TaskData, TaskStatus, TaskStage, TaskResponse
+from src.models.task_models import TaskData, TaskStatus, TaskStage, TaskResponse, VideoMetadata
 from src.config import settings
 
 
@@ -21,7 +21,7 @@ class TaskManagerService:
             self.redis = await redis_service.get_redis()
         return self.redis
     
-    async def create_task(self, user_id: str, task_type: Optional[str] = "process_data") -> str:
+    async def create_task(self, user_id: str, video_metadata: VideoMetadata, task_type: Optional[str] = "process_data") -> str:
         """Create a new background task for a user."""
         redis_client = await self._get_redis()
         
@@ -53,7 +53,8 @@ class TaskManagerService:
             stage=TaskStage.QUEUED,
             progress=0,
             created_at=now,
-            updated_at=now
+            updated_at=now,
+            video_metadata=video_metadata
         )
         
         # Store in Redis atomically

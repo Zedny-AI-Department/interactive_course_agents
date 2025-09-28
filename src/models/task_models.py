@@ -26,6 +26,13 @@ class AgentMode(str, Enum):
     SEARCH_FOR_COPYRIGHT = "search_for_copyright"
 
 
+class VideoMetadata(BaseModel):
+    course_id: str = Field(..., description="Course identifier")
+    chapter_id: str = Field(..., description="Chapter identifier")
+    video_name: str = Field(..., description="Video name")
+    agent_mode: AgentMode = Field(..., description="Processing mode used")
+
+
 class TaskData(BaseModel):
     task_id: str
     user_id: str
@@ -36,6 +43,8 @@ class TaskData(BaseModel):
     updated_at: datetime
     result: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
+    video_metadata: VideoMetadata
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class TaskResponse(BaseModel):
@@ -48,6 +57,8 @@ class TaskResponse(BaseModel):
     updated_at: datetime
     result: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
+    video_metadata: VideoMetadata
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class CreateTaskResponse(BaseModel):

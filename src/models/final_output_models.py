@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from .base_models import KeywordItem, WordTimestamp, TimestampedContent
 from .visual_content_models import VisualContent
+from .task_models import VideoMetadata
 
 
 class ProcessedParagraph(TimestampedContent):
@@ -76,5 +77,7 @@ class EducationalContent(BaseModel):
     paragraphs: List[ProcessedParagraph] = Field(
         description="List of fully processed paragraphs"
     )
-
+    video_metadata: Optional[VideoMetadata] = Field(
+        description="Course information metadata"
+    )
     assist_file_id: Optional[UUID] = None

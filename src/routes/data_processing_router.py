@@ -12,7 +12,7 @@ from src.services.data_processing_service import DataProcessingService
 from src.services.background_processor import BackgroundProcessor
 from src.container import get_data_processing_service, get_background_processor
 from src.models import EducationalContent
-from src.models.task_models import CreateTaskResponse, TaskResponse, UserTasksResponse, AgentMode
+from src.models.task_models import CreateTaskResponse, TaskResponse, UserTasksResponse, AgentMode, VideoMetadata
 from src.services import task_manager, auth_service
 
 
@@ -29,13 +29,23 @@ async def create_general_processing_task(
     srt_file: UploadFile = File(..., description="SRT subtitle file"),
     media_file: UploadFile = File(..., description="Art/media file (video, audio, etc.)"),
     agent_mode: AgentMode = Query(..., description="Agent processing mode"),
+    course_id: str = Query(..., description="Course identifier"),
+    chapter_id: str = Query(..., description="Chapter identifier"),
+    video_name: str = Query(..., description="Video name"),
     pdf_file: UploadFile = File(None, description="Optional PDF assistance file"),
     user_id: str = Depends(auth_service.get_current_user_id),
     background_processor: BackgroundProcessor = Depends(get_background_processor)
 ):
     """Create a background task for general data processing with different agent modes."""
     try:
-        task_id = await task_manager.create_task(user_id)
+        # Create task with course metadata
+        video_metadata = VideoMetadata(
+            course_id=course_id,
+            chapter_id=chapter_id,
+            video_name=video_name,
+            agent_mode=agent_mode
+        )
+        task_id = await task_manager.create_task(user_id, video_metadata=video_metadata)
 
         # Read file contents
         srt_content = await srt_file.read()
@@ -106,14 +116,23 @@ async def create_generation_task(
     background_tasks: BackgroundTasks,
     srt_file: UploadFile = File(..., description="SRT subtitle file"),
     media_file: UploadFile = File(..., description="Video or audio media file"),
+    course_id: str = Query(..., description="Course identifier"),
+    chapter_id: str = Query(..., description="Chapter identifier"),
+    video_name: str = Query(..., description="Video name"),
     user_id: str = Depends(auth_service.get_current_user_id),
     background_processor: BackgroundProcessor = Depends(get_background_processor)
 ):
     """Create a background task to generate educational content."""
     try:
-        # Create task
+        # Create task with course metadata
+        video_metadata = VideoMetadata(
+            course_id=course_id,
+            chapter_id=chapter_id,
+            video_name=video_name,
+            agent_mode=AgentMode.GENERATE
+        )
         task_id = await task_manager.create_task(
-            user_id, "generate_paragraphs_with_visuals"
+            user_id, "generate_paragraphs_with_visuals", video_metadata=video_metadata
         )
 
         # Read file contents
@@ -154,14 +173,23 @@ async def create_pdf_visuals_task(
     srt_file: UploadFile = File(..., description="SRT subtitle file"),
     media_file: UploadFile = File(..., description="Video or audio media file"),
     pdf_file: UploadFile = File(..., description="PDF file containing visual elements"),
+    course_id: str = Query(..., description="Course identifier"),
+    chapter_id: str = Query(..., description="Chapter identifier"),
+    video_name: str = Query(..., description="Video name"),
     user_id: str = Depends(auth_service.get_current_user_id),
     background_processor: BackgroundProcessor = Depends(get_background_processor)
 ):
     """Create a background task to extract PDF visuals and align them."""
     try:
-        # Create task
+        # Create task with course metadata
+        video_metadata = VideoMetadata(
+            course_id=course_id,
+            chapter_id=chapter_id,
+            video_name=video_name,
+            agent_mode=AgentMode.ALWAYS_SEARCH
+        )
         task_id = await task_manager.create_task(
-            user_id, "extract_and_align_pdf_visuals"
+            user_id, "extract_and_align_pdf_visuals", video_metadata=video_metadata
         )
 
         # Read file contents
@@ -204,14 +232,23 @@ async def create_pdf_visuals_copyright_task(
     srt_file: UploadFile = File(..., description="SRT subtitle file"),
     media_file: UploadFile = File(..., description="Video or audio media file"),
     pdf_file: UploadFile = File(..., description="PDF file containing visual elements"),
+    course_id: str = Query(..., description="Course identifier"),
+    chapter_id: str = Query(..., description="Chapter identifier"),
+    video_name: str = Query(..., description="Video name"),
     user_id: str = Depends(auth_service.get_current_user_id),
     background_processor: BackgroundProcessor = Depends(get_background_processor)
 ):
     """Create a background task to extract PDF visuals with copyright detection."""
     try:
-        # Create task
+        # Create task with course metadata
+        video_metadata = VideoMetadata(
+            course_id=course_id,
+            chapter_id=chapter_id,
+            video_name=video_name,
+            agent_mode=AgentMode.SEARCH_FOR_COPYRIGHT
+        )
         task_id = await task_manager.create_task(
-            user_id, "extract_and_align_pdf_visuals_with_copyright_detection"
+            user_id, "extract_and_align_pdf_visuals_with_copyright_detection", video_metadata=video_metadata
         )
 
         # Read file contents
@@ -298,6 +335,7 @@ async def get_task_result(
             "task_id": task_id,
             "status": task_data.status,
             "result": task_data.result,
+            "video_metadata": task_data.video_metadata
         }
 
     except HTTPException:
@@ -369,14 +407,28 @@ async def cancel_task(
 async def generate_educational_content(
     srt_file: UploadFile = File(..., description="SRT subtitle file"),
     media_file: UploadFile = File(..., description="Video or audio media file"),
+    course_id: str = Query(..., description="Course identifier"),
+    chapter_id: str = Query(..., description="Chapter identifier"),
+    video_name: str = Query(..., description="Video name"),
     data_processing_service: DataProcessingService = Depends(get_data_processing_service)
 ):
     """Synchronous processing endpoint (for backward compatibility)."""
     try:
+        # Create course metadata
+        video_metadata = VideoMetadata(
+            course_id=course_id,
+            chapter_id=chapter_id,
+            video_name=video_name,
+            agent_mode=AgentMode.GENERATE
+        )
+        
         # Align paragraphs with audio
         result = await data_processing_service.generate_paragraphs_with_visuals(
             media_file=media_file, srt_file=srt_file
         )
+        
+        # Add course metadata to result
+        result.video_metadata = video_metadata
         return result
     except Exception as e:
         raise HTTPException(
@@ -390,14 +442,28 @@ async def extract_pdf_visuals_and_align(
     srt_file: UploadFile = File(..., description="SRT subtitle file"),
     media_file: UploadFile = File(..., description="Video or audio media file"),
     pdf_file: UploadFile = File(..., description="PDF file containing visual elements"),
+    course_id: str = Query(..., description="Course identifier"),
+    chapter_id: str = Query(..., description="Chapter identifier"),
+    video_name: str = Query(..., description="Video name"),
     data_processing_service: DataProcessingService = Depends(get_data_processing_service)
 ):
     """Synchronous processing endpoint (for backward compatibility)."""
     try:
+        # Create course metadata
+        video_metadata = VideoMetadata(
+            course_id=course_id,
+            chapter_id=chapter_id,
+            video_name=video_name,
+            agent_mode=AgentMode.ALWAYS_SEARCH
+        )
+        
         # Align paragraphs with audio
         result = await data_processing_service.extract_and_align_pdf_visuals(
             media_file=media_file, srt_file=srt_file, pdf_file=pdf_file
         )
+        
+        # Add course metadata to result
+        result.video_metadata = video_metadata
         return result
     except Exception as e:
         raise HTTPException(
@@ -413,14 +479,28 @@ async def extract_pdf_visuals_with_copyright_and_align(
     srt_file: UploadFile = File(..., description="SRT subtitle file"),
     media_file: UploadFile = File(..., description="Video or audio media file"),
     pdf_file: UploadFile = File(..., description="PDF file containing visual elements"),
+    course_id: str = Query(..., description="Course identifier"),
+    chapter_id: str = Query(..., description="Chapter identifier"),
+    video_name: str = Query(..., description="Video name"),
     data_processing_service: DataProcessingService = Depends(get_data_processing_service)
 ):
     """Synchronous processing endpoint with copyright detection (for backward compatibility)."""
     try:
+        # Create course metadata
+        video_metadata = VideoMetadata(
+            course_id=course_id,
+            chapter_id=chapter_id,
+            video_name=video_name,
+            agent_mode=AgentMode.SEARCH_FOR_COPYRIGHT
+        )
+        
         # Align paragraphs with audio
         result = await data_processing_service.extract_and_align_pdf_visuals_with_copyright_detection(
             media_file=media_file, srt_file=srt_file, pdf_file=pdf_file
         )
+        
+        # Add course metadata to result
+        result.video_metadata = video_metadata
         return result
     except Exception as e:
         raise HTTPException(

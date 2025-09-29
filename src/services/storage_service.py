@@ -61,8 +61,6 @@ class StorageService:
                 "image_3d_url": image_data.image_3d_url,
                 "description": image_data.description,
             }
-            print("-------------------")
-            print(data)
             files = {"image": (image_name, image_bytes, content_type)}
             response = await client.post(
                 f"{self.api_base_url}{StorageAPIRoutes.IMAGES}", data=data, files=files
@@ -80,9 +78,7 @@ class StorageService:
         """Submit 3d image for existing image in DB."""
         async with httpx.AsyncClient(timeout=httpx.Timeout(write=60.0, connect=10.0, read=60.0, pool=30.0)) as client:
             files = {"image_3d": (image_3d_name, image_3d_bytes, "application/octet-stream")}
-            print(1)
             route = StorageAPIRoutes.IMAGE_3D.format(image_id=str(assist_image_id))
-            print(route)
             try:
                 response = await client.post(f"{self.api_base_url}{route}", files=files)
                 response.raise_for_status()

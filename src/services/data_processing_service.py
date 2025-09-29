@@ -89,19 +89,15 @@ class DataProcessingService:
         Raises:
             Exception: If generated paragraphs and aligned paragraphs lengths don't match
         """
-        print(1)
         # Save video file first
         video_bytes = await media_file.read()
-        print(2)
         video_file_id = await self.storage_service.save_video_via_api(
             video_bytes=video_bytes,
             video_name=media_file.filename,
             content_type=media_file.content_type or "video/mp4"
         )
-        print(3)
         # Reset file position for video processing
         await media_file.seek(0)
-        print(4)
         
         srt_text = await self._extract_srt_text(srt_file)
         generated_output = await self._generate_paragraphs_from_transcript(srt_text)
@@ -151,8 +147,6 @@ class DataProcessingService:
 
         # Store extracted images and update visuals with storage URLs
         processed_visuals = await self._store_and_update_extracted_images(processed_visuals, pdf_file_id)
-        print("---------------------")
-        print(f"processed_visuals: {processed_visuals}")
 
         generated_output = await self._generate_paragraphs_with_visual_mapping(
             srt_text, processed_visuals
@@ -196,7 +190,6 @@ class DataProcessingService:
         Raises:
             Exception: If generated paragraphs and aligned paragraphs lengths don't match
         """
-        print("*******************************")
         # Save video file first
         video_bytes = await media_file.read()
         video_file_id = await self.storage_service.save_video_via_api(
@@ -210,18 +203,13 @@ class DataProcessingService:
         
         # Store the PDF file and images
         pdf_bytes = await pdf_file.read()
-        print("---------------------------------------")
         pdf_file_id = await self._store_pdf_file(pdf_file.filename, pdf_bytes)
-        print("*******************************")
         srt_text = await self._extract_srt_text(srt_file)
-        print("srt processed")
         processed_visuals = await self._extract_and_process_pdf_images_with_copyright(
             pdf_bytes
         )
         # Store extracted images and update visuals with storage URLs
         processed_visuals = await self._store_and_update_extracted_images(processed_visuals, pdf_file_id)
-        print("---------------------")
-        print(f"processed_visuals: {processed_visuals}")
         generated_output = (
             await self._generate_paragraphs_with_visual_mapping_for_copyright(
                 srt_text, processed_visuals
@@ -482,11 +470,13 @@ class DataProcessingService:
             Processed visual model or None
         """
         if paragraph.visuals is not None:
-            return self._map_visual_to_word_timestamps(
+            processed_visual =  self._map_visual_to_word_timestamps(
                 visual_model=paragraph.visuals,
                 paragraph_words=aligned_paragraph.paragraph_words,
                 is_search_agent=is_search_agent,
             )
+            return processed_visual
+
         return None
 
     def _create_processed_paragraph(
@@ -591,6 +581,7 @@ class DataProcessingService:
         Returns:
             bool: True if words match at the position
         """
+        cleaned_visual_words = cleaned_visual_words[:2]
         seq_words = [
             self._clean_text(word.text).strip()
             for word in paragraph_words[index : index + len(cleaned_visual_words)]
@@ -757,14 +748,11 @@ class DataProcessingService:
         Returns:
             str: File ID of the stored PDF
         """
-        print(11)
         file_types = await self.storage_service.get_file_types()
-        print(file_types)
         pdf_file_type_id = next(
             (str(ft.id) for ft in file_types.file_types if ft.name.lower() == "pdf"), 
             None
         )
-        print(pdf_file_type_id)
         if not pdf_file_type_id:
             raise ValueError("PDF file type not found in storage system")
             
@@ -812,7 +800,6 @@ class DataProcessingService:
                 searched_image_url=search_url,
                 description=visual.description
             )
-            print(f"image_data: {image_data}")
             # Store the image
             stored_image = await self.storage_service.save_image_via_api(
                 image_data=image_data,
@@ -823,14 +810,10 @@ class DataProcessingService:
             
             # Update visual content URL based on protection status
             updated_content = visual.content
-            print("-----------, content", is_protected)
-            print(f"updated_content: {visual}")
-            print(f"stored_image: {stored_image.original_image_url}")
 
             if is_protected is None or is_protected is True:
                 pass
             elif is_protected is False and visual.type == "image" :
-                print("t")
                 updated_content.url = stored_image.original_image_url                    
             
             # Create StoredVisualContent with assist_image_id

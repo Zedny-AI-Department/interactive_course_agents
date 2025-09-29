@@ -151,12 +151,9 @@ class ImageProcessingService:
             tmp_file.write(image_bytes)
             tmp_file_path = tmp_file.name
         try:
-            print(1)
             os.environ["FAL_KEY"] = settings.FAL_KEY
             # Encode image as data URL for fal_client
-            print(2)
             image_data_url = fal_client.encode_file(tmp_file_path)
-            print(3, image_data_url)
             input_args = {
                 "input_image_urls": [image_data_url],
                 "geometry_file_format": geometry_format,

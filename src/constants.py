@@ -3,6 +3,7 @@ class StorageAPIRoutes:
     IMAGES = "/assist-images/"
     FILE_TYPES = "/assist-files/types/"
     IMAGE_3D = "/assist-images/{image_id}/3d-image/"
+    VIDEO = "/interactive-courses/videos/upload/"
 
 
 class ParagraphWithVisualPrompt:
@@ -12,7 +13,7 @@ class ParagraphWithVisualPrompt:
             ## Your Task
 
            1. **Paragraph Division**
-                - Divide the full text into small paragraphs, each paragraph about 2–3 lines.  
+                - Divide the full text into small paragraphs, each paragraph about 2 or maximum 3 sentences.  
                 - Group related ideas naturally.  
                 - Ensure smooth readability (no abrupt breaks).  
 
@@ -35,26 +36,36 @@ class ParagraphWithVisualPrompt:
                 - Every paragraph MUST have **exactly one visual** (mandatory).  
                 - Visual type MUST be one of: `"chart"`, `"table"`, `"image"`.  
                 - start_sentence field
-                - Rules for charts:  
-                    - Chart type MUST be one of: `"bar"`, `"line"`, `"pie"`, `"radar"`, `"doughnut"`. 
-                    - dataset MUST be list of float. 
-                    - Provide mock chart data relevant to the paragraph text.  
-                - Rules for tables:  
-                    - Use when content is structured (steps, categories, facts, pros/cons, comparisons).  
-                    - Provide mock rows/columns relevant to the paragraph text.  
-                - Rules for images: 
-                    - Search for related image on internet 
-                    - Provide `src`, `alt`, and `title`.  
-                    - `src` MUST be a direct image URL (not a website link). 
-                - At least 60% of visuals across all paragraphs MUST be charts or tables.  
 
+                ### Chart Rules (80% of all visuals)
+                    - Chart type MUST be one of: `"bar"`, `"line"`, `"pie"`, `"radar"`, `"doughnut"`.  
+                    - Dataset MUST be list of float values.  
+                    - Provide **mock but realistic chart data** relevant to the paragraph text.  
+                ### Table Rules (10% of all visuals)
+                    - Use when content is structured (steps, categories, facts, pros/cons, comparisons).  
+                    - Provide **mock rows/columns** relevant to the paragraph text.  
+
+                ### Image Rules (10% of all visuals)
+                    - Search for a related image on the internet.  
+                    - Provide `src`, `alt`, and `title`.  
+                    - `src` MUST be a **direct image URL** (not a website, no dummy links).  
+                    - Example of valid `src`:  
+                    - `"https://upload.wikimedia.org/wikipedia/commons/3/3a/Neural_network.svg"`  
+            
+            5. **Distribution Requirement**
+                - Across all paragraphs:  
+                    - 80% visuals MUST be `"chart"`.  
+                    - 10% visuals MUST be `"table"`.  
+                    - 10% visuals MUST be `"image"`.  
 
             ## Validation Rules (MANDATORY)
                 1. Every paragraph object MUST include a `visual`.  
                 2. The `visual.type` MUST be exactly one of: `"chart"`, `"table"`, `"image"`.  
-                3. At least 60% of visuals MUST be `"chart"` or `"table"`.  
-                4. Every paragraph MUST have at least one keyword.  
-                5. Output MUST strictly follow the schema below. No extra text, no explanations.  
+                3. At least 80% of visuals MUST be `"chart"`.  
+                4. Exactly 10% MUST be `"table"`.  
+                5. Exactly 10% MUST be `"image"`, with **real image URLs**.  
+                6. Every paragraph MUST have at least one keyword.  
+                7. Output MUST strictly follow the schema below. No extra text, no explanations.  
 
                 If any rule is broken, REJECT the output and regenerate until all rules are satisfied.  
 
@@ -175,7 +186,7 @@ class ParagraphAlignmentWithVisualPrompt:
             ## Your Task
 
            1. **Paragraph Division**
-                - Divide the full text into small paragraphs, each paragraph about 2–3 lines.  
+                - Divide the full text into small paragraphs, each paragraph about 2 or maximum 3 sentences.  
                 - Group related ideas naturally.  
                 - Ensure smooth readability (no abrupt breaks).  
 
@@ -203,7 +214,7 @@ class ParagraphAlignmentWithVisualPrompt:
                 - start_sentence field
 
             ## Validation Rules (MANDATORY)
-                1. Every paragraph object MUST include a `visual`.  
+                # 1. Every paragraph object MUST include a `visual`.  
                 4. Every paragraph MUST have at least one keyword.  
                 5. Output MUST strictly follow the schema below. No extra text, no explanations.  
 

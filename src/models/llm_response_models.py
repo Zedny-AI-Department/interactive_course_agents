@@ -66,8 +66,8 @@ class LLMParagraphWithVisual(LLMParagraphBase):
         visuals: Optional visual content to display with this paragraph
     """
 
-    visuals: Optional[LLMGeneratedVisualItem] = Field(
-        default=None, description="Visual content associated with this paragraph"
+    visuals: LLMGeneratedVisualItem = Field(
+        description="Visual content associated with this paragraph"
     )
 
 

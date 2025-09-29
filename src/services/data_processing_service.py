@@ -89,6 +89,20 @@ class DataProcessingService:
         Raises:
             Exception: If generated paragraphs and aligned paragraphs lengths don't match
         """
+        print(1)
+        # Save video file first
+        video_bytes = await media_file.read()
+        print(2)
+        video_file_id = await self.storage_service.save_video_via_api(
+            video_bytes=video_bytes,
+            video_name=media_file.filename,
+            content_type=media_file.content_type or "video/mp4"
+        )
+        print(3)
+        # Reset file position for video processing
+        await media_file.seek(0)
+        print(4)
+        
         srt_text = await self._extract_srt_text(srt_file)
         generated_output = await self._generate_paragraphs_from_transcript(srt_text)
         paragraph_items = self._create_paragraph_items(generated_output.paragraphs)
@@ -99,7 +113,7 @@ class DataProcessingService:
             video_paragraph_alignment_result=video_alignment_result,
             generated_output=generated_output,
         )
-        return EducationalContent(paragraphs=combined_result, video_metadata=video_metadata)
+        return EducationalContent(paragraphs=combined_result, video_metadata=video_metadata, video_file_id=video_file_id)
 
     async def extract_and_align_pdf_visuals(
         self, srt_file: UploadFile, media_file: UploadFile, pdf_file: UploadFile, video_metadata
@@ -117,7 +131,18 @@ class DataProcessingService:
         Raises:
             Exception: If generated paragraphs and aligned paragraphs lengths don't match
         """
-        # Store the PDF file first
+        # Save video file first
+        video_bytes = await media_file.read()
+        video_file_id = await self.storage_service.save_video_via_api(
+            video_bytes=video_bytes,
+            video_name=media_file.filename,
+            content_type=media_file.content_type or "video/mp4"
+        )
+        
+        # Reset file position for video processing
+        await media_file.seek(0)
+        
+        # Store the PDF file
         pdf_bytes = await pdf_file.read()
         pdf_file_id = await self._store_pdf_file(pdf_file.filename, pdf_bytes)
 
@@ -144,7 +169,7 @@ class DataProcessingService:
             generated_output=aligned_paragraphs,
             is_search_agent=True,
         )
-        return EducationalContent(paragraphs=combined_result, video_metadata=video_metadata, assist_file_id=str(pdf_file_id))
+        return EducationalContent(paragraphs=combined_result, video_metadata=video_metadata, assist_file_id=str(pdf_file_id), video_file_id=video_file_id)
 
     async def extract_and_align_pdf_visuals_with_copyright_detection(
         self, srt_file: UploadFile, media_file: UploadFile, pdf_file: UploadFile, video_metadata
@@ -172,6 +197,17 @@ class DataProcessingService:
             Exception: If generated paragraphs and aligned paragraphs lengths don't match
         """
         print("*******************************")
+        # Save video file first
+        video_bytes = await media_file.read()
+        video_file_id = await self.storage_service.save_video_via_api(
+            video_bytes=video_bytes,
+            video_name=media_file.filename,
+            content_type=media_file.content_type or "video/mp4"
+        )
+        
+        # Reset file position for video processing
+        await media_file.seek(0)
+        
         # Store the PDF file and images
         pdf_bytes = await pdf_file.read()
         print("---------------------------------------")
@@ -204,7 +240,7 @@ class DataProcessingService:
             is_search_agent=True,
         )
 
-        return EducationalContent(paragraphs=combined_result, video_metadata=video_metadata, assist_file_id=str(pdf_file_id))
+        return EducationalContent(paragraphs=combined_result, video_metadata=video_metadata, assist_file_id=str(pdf_file_id), video_file_id=video_file_id)
 
     async def _extract_srt_text(self, srt_file: UploadFile) -> str:
         """Extract text content from SRT file.

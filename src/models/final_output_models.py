@@ -81,3 +81,4 @@ class EducationalContent(BaseModel):
         description="Course information metadata"
     )
     assist_file_id: Optional[UUID] = None
+    video_file_id: UUID

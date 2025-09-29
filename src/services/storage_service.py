@@ -99,3 +99,18 @@ class StorageService:
             result = ImageResponseSchema(**response.json())
             return result.image_3d_url
 
+
+    async def save_video_via_api(
+        self,
+        video_bytes: bytes,
+        video_name: str,
+        content_type: str,
+    ) -> ImageResponseSchema:
+        """Save image metadata to database via API (dummy implementation)."""
+        async with httpx.AsyncClient(timeout=httpx.Timeout(write=500.0, connect=60.0, read=500.0, pool=300.0)) as client:
+            files = {"video_file": (video_name, video_bytes, content_type)}
+            response = await client.post(
+                f"{self.api_base_url}{StorageAPIRoutes.VIDEO}", files=files
+            )
+            response.raise_for_status()
+            return str(response.json()["results"]["file_id"])

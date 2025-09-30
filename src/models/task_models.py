@@ -30,9 +30,10 @@ class AgentMode(str, Enum):
 class VideoMetadata(BaseModel):
     course_id: UUID = Field(..., description="Course identifier")
     chapter_id: UUID = Field(..., description="Chapter identifier")
-    video_name: str = Field(..., description="Video name")
+    title: str = Field(..., description="Video name")
     agent_mode: AgentMode = Field(..., description="Processing mode used")
-
+    video_duration: str
+    view_index: int
 
 class TaskData(BaseModel):
     task_id: str

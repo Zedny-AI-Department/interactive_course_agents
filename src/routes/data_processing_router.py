@@ -31,7 +31,9 @@ async def create_general_processing_task(
     agent_mode: AgentMode = Query(..., description="Agent processing mode"),
     course_id: str = Query(..., description="Course identifier"),
     chapter_id: str = Query(..., description="Chapter identifier"),
-    video_name: str = Query(..., description="Video name"),
+    title: str = Query(..., description="Video name"),
+    video_duration: str = Query(..., description=("video duration")),
+    view_index: int = Query(..., description="videw index"),
     pdf_file: UploadFile = File(None, description="Optional PDF assistance file"),
     user_id: str = Depends(auth_service.get_current_user_id),
     background_processor: BackgroundProcessor = Depends(get_background_processor)
@@ -42,7 +44,9 @@ async def create_general_processing_task(
         video_metadata = VideoMetadata(
             course_id=course_id,
             chapter_id=chapter_id,
-            video_name=video_name,
+            title=title,
+            video_duration=video_duration,
+            view_index=view_index,
             agent_mode=agent_mode
         )
         task_id = await task_manager.create_task(user_id, video_metadata=video_metadata)

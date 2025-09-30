@@ -62,9 +62,9 @@ class InteractiveDBRepository:
     ) -> ImageResponseSchema:
         """Save image metadata to database via API."""
         try:
-
             image_data_dict = image_data.model_dump()
             image_data_dict["file_id"] = str(image_data.file_id)
+            image_data_dict["proposed_image_type"] = image_data.proposed_image_type.value
             image_file = {"image": (image_name, image_bytes, content_type)}
             api_result = await self.interactive_db_client.save_image(
                 image_data=image_data_dict, image_file=image_file

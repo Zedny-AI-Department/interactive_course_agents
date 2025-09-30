@@ -2,9 +2,9 @@ from typing import List
 from fastapi import UploadFile
 import string
 
+from src.repositories import InteractiveDBRepository
 from src.models.llm_response_models import LLMGeneratedVisualItem
 from src.services import VideoService, SRTService, LLMService
-from src.services.storage_service import StorageService
 from src.services.image_service import ImageProcessingService as ImageService
 from src.services.file_processing_service import FileProcessingService as FileService
 from src.models import (
@@ -26,7 +26,12 @@ from src.models import (
     AlignedParagraph,
 )
 from src.models.visual_content_models import SearchAgentVisualContent
-from src.models.storage_models import ImageCreateSchema, ImageTypeEnum
+from src.models.interactive_db_models import (
+    FileResponseSchema,
+    GetTypesResponseSchema,
+    ImageCreateSchema,
+    ImageTypeEnum,
+)
 from src.constants import ParagraphAlignmentWithVisualPrompt, ParagraphWithVisualPrompt
 
 
@@ -55,7 +60,7 @@ class DataProcessingService:
         llm_service: LLMService,
         img_service: ImageService,
         file_processing_service: FileService,
-        storage_service: StorageService,
+        interactive_db_repository: InteractiveDBRepository
     ):
         """Initialize the DataProcessingService with required dependencies.
 
@@ -65,14 +70,14 @@ class DataProcessingService:
             llm_service: Service for Large Language Model operations
             img_service: Service for image processing and search
             file_processing_service: Service for various file format processing
-            storage_service: Service for PDF and image storage operations
+            interactive_db_repository: Repository for files and image DB operations
         """
         self.video_service = video_service
         self.srt_service = srt_service
         self.llm_service = llm_service
         self.img_service = img_service
         self.file_processing_service = file_processing_service
-        self.storage_service = storage_service
+        self.interactive_db_repository = interactive_db_repository
 
     async def generate_paragraphs_with_visuals(
         self, srt_file: UploadFile, media_file: UploadFile, video_metadata
@@ -91,14 +96,16 @@ class DataProcessingService:
         """
         # Save video file first
         video_bytes = await media_file.read()
-        video_file_id = await self.storage_service.save_video_via_api(
-            video_bytes=video_bytes,
-            video_name=media_file.filename,
-            content_type=media_file.content_type or "video/mp4"
+        video_file: FileResponseSchema = (
+            await self.interactive_db_repository.save_video_file(
+                video_bytes=video_bytes,
+                video_name=media_file.filename,
+                content_type=media_file.content_type or "video/mp4",
+            )
         )
         # Reset file position for video processing
         await media_file.seek(0)
-        
+
         srt_text = await self._extract_srt_text(srt_file)
         generated_output = await self._generate_paragraphs_from_transcript(srt_text)
         paragraph_items = self._create_paragraph_items(generated_output.paragraphs)
@@ -109,10 +116,18 @@ class DataProcessingService:
             video_paragraph_alignment_result=video_alignment_result,
             generated_output=generated_output,
         )
-        return EducationalContent(paragraphs=combined_result, video_metadata=video_metadata, video_file_id=video_file_id)
+        return EducationalContent(
+            paragraphs=combined_result,
+            video_metadata=video_metadata,
+            video_file_id=str(video_file.file_id),
+        )
 
     async def extract_and_align_pdf_visuals(
-        self, srt_file: UploadFile, media_file: UploadFile, pdf_file: UploadFile, video_metadata
+        self,
+        srt_file: UploadFile,
+        media_file: UploadFile,
+        pdf_file: UploadFile,
+        video_metadata,
     ) -> EducationalContent:
         """Extract visuals from PDF and align them with paragraphs from SRT and media files.
 
@@ -129,15 +144,17 @@ class DataProcessingService:
         """
         # Save video file first
         video_bytes = await media_file.read()
-        video_file_id = await self.storage_service.save_video_via_api(
-            video_bytes=video_bytes,
-            video_name=media_file.filename,
-            content_type=media_file.content_type or "video/mp4"
+        video_file: FileResponseSchema = (
+            await self.interactive_db_repository.save_video_file(
+                video_bytes=video_bytes,
+                video_name=media_file.filename,
+                content_type=media_file.content_type or "video/mp4",
+            )
         )
-        
+
         # Reset file position for video processing
         await media_file.seek(0)
-        
+
         # Store the PDF file
         pdf_bytes = await pdf_file.read()
         pdf_file_id = await self._store_pdf_file(pdf_file.filename, pdf_bytes)
@@ -146,7 +163,9 @@ class DataProcessingService:
         processed_visuals = await self._extract_and_process_pdf_images(pdf_bytes)
 
         # Store extracted images and update visuals with storage URLs
-        processed_visuals = await self._store_and_update_extracted_images(processed_visuals, pdf_file_id)
+        processed_visuals = await self._store_and_update_extracted_images(
+            processed_visuals, pdf_file_id
+        )
 
         generated_output = await self._generate_paragraphs_with_visual_mapping(
             srt_text, processed_visuals
@@ -163,10 +182,19 @@ class DataProcessingService:
             generated_output=aligned_paragraphs,
             is_search_agent=True,
         )
-        return EducationalContent(paragraphs=combined_result, video_metadata=video_metadata, assist_file_id=str(pdf_file_id), video_file_id=video_file_id)
+        return EducationalContent(
+            paragraphs=combined_result,
+            video_metadata=video_metadata,
+            assist_file_id=str(pdf_file_id),
+            video_file_id=str(video_file.file_id),
+        )
 
     async def extract_and_align_pdf_visuals_with_copyright_detection(
-        self, srt_file: UploadFile, media_file: UploadFile, pdf_file: UploadFile, video_metadata
+        self,
+        srt_file: UploadFile,
+        media_file: UploadFile,
+        pdf_file: UploadFile,
+        video_metadata,
     ) -> EducationalContent:
         """Extract visuals from PDF with copyright detection and align them with paragraphs.
 
@@ -174,9 +202,9 @@ class DataProcessingService:
         - Store the PDF file
         - For extracted images:
           - For charts and tables: store with is_protected = false
-          - For images: if LLM returns is_protected = false, store with is_protected = false 
+          - For images: if LLM returns is_protected = false, store with is_protected = false
             and no search_url, use original url as image url for paragraph visuals
-          - For images: if LLM returns is_protected = true, save with is_protected = true, 
+          - For images: if LLM returns is_protected = true, save with is_protected = true,
             with search_url and use search_url in paragraph visuals
 
         Args:
@@ -192,15 +220,17 @@ class DataProcessingService:
         """
         # Save video file first
         video_bytes = await media_file.read()
-        video_file_id = await self.storage_service.save_video_via_api(
-            video_bytes=video_bytes,
-            video_name=media_file.filename,
-            content_type=media_file.content_type or "video/mp4"
+        video_file: FileResponseSchema = (
+            await self.interactive_db_repository.save_video_file(
+                video_bytes=video_bytes,
+                video_name=media_file.filename,
+                content_type=media_file.content_type or "video/mp4",
+            )
         )
-        
+
         # Reset file position for video processing
         await media_file.seek(0)
-        
+
         # Store the PDF file and images
         pdf_bytes = await pdf_file.read()
         pdf_file_id = await self._store_pdf_file(pdf_file.filename, pdf_bytes)
@@ -209,7 +239,9 @@ class DataProcessingService:
             pdf_bytes
         )
         # Store extracted images and update visuals with storage URLs
-        processed_visuals = await self._store_and_update_extracted_images(processed_visuals, pdf_file_id)
+        processed_visuals = await self._store_and_update_extracted_images(
+            processed_visuals, pdf_file_id
+        )
         generated_output = (
             await self._generate_paragraphs_with_visual_mapping_for_copyright(
                 srt_text, processed_visuals
@@ -228,7 +260,12 @@ class DataProcessingService:
             is_search_agent=True,
         )
 
-        return EducationalContent(paragraphs=combined_result, video_metadata=video_metadata, assist_file_id=str(pdf_file_id), video_file_id=video_file_id)
+        return EducationalContent(
+            paragraphs=combined_result,
+            video_metadata=video_metadata,
+            assist_file_id=str(pdf_file_id),
+            video_file_id=str(video_file.file_id),
+        )
 
     async def _extract_srt_text(self, srt_file: UploadFile) -> str:
         """Extract text content from SRT file.
@@ -282,7 +319,8 @@ class DataProcessingService:
         return await self.img_service.search_images(original_images=extracted_visuals)
 
     async def _extract_and_process_pdf_images_with_copyright(
-        self, file_bytes: bytes,
+        self,
+        file_bytes: bytes,
     ) -> List[LLMVisualContentWithCopyright]:
         """Extract images from PDF file and process them with copyright detection.
 
@@ -458,7 +496,10 @@ class DataProcessingService:
         )
 
     def _process_paragraph_visuals(
-        self, paragraph: LLMParagraphWithVisual, aligned_paragraph: AlignedParagraph, is_search_agent: bool = False
+        self,
+        paragraph: LLMParagraphWithVisual,
+        aligned_paragraph: AlignedParagraph,
+        is_search_agent: bool = False,
     ):
         """Process visual data for a paragraph if it exists.
 
@@ -470,7 +511,7 @@ class DataProcessingService:
             Processed visual model or None
         """
         if paragraph.visuals is not None:
-            processed_visual =  self._map_visual_to_word_timestamps(
+            processed_visual = self._map_visual_to_word_timestamps(
                 visual_model=paragraph.visuals,
                 paragraph_words=aligned_paragraph.paragraph_words,
                 is_search_agent=is_search_agent,
@@ -534,8 +575,13 @@ class DataProcessingService:
                 assist_image_id = None
                 if visual_model.assist_image_id:
                     from uuid import UUID
-                    assist_image_id = UUID(visual_model.assist_image_id) if isinstance(visual_model.assist_image_id, str) else visual_model.assist_image_id
-                
+
+                    assist_image_id = (
+                        UUID(visual_model.assist_image_id)
+                        if isinstance(visual_model.assist_image_id, str)
+                        else visual_model.assist_image_id
+                    )
+
                 # Use SearchAgentVisualContent for search agents to ensure validation
                 if is_search_agent and assist_image_id:
                     return SearchAgentVisualContent(
@@ -740,57 +786,62 @@ class DataProcessingService:
 
     async def _store_pdf_file(self, filename: str, pdf_bytes: bytes) -> str:
         """Store PDF file and return file ID.
-        
+
         Args:
             filename: Name of the PDF file
             pdf_bytes: PDF file bytes
-            
+
         Returns:
             str: File ID of the stored PDF
         """
-        file_types = await self.storage_service.get_file_types()
+        file_types: GetTypesResponseSchema = await self.interactive_db_repository.get_file_types()
         pdf_file_type_id = next(
-            (str(ft.id) for ft in file_types.file_types if ft.name.lower() == "pdf"), 
-            None
+            (str(ft.id) for ft in file_types.result if ft.name.lower() == "pdf"),
+            None,
         )
         if not pdf_file_type_id:
             raise ValueError("PDF file type not found in storage system")
-            
-        return await self.storage_service.save_file_via_api(
+
+        stored_file: FileResponseSchema =  await self.interactive_db_repository.save_assist_file(
             file_bytes=pdf_bytes,
             file_name=filename,
             file_type_id=str(pdf_file_type_id),
-            content_type="application/pdf"
+            content_type="application/pdf",
         )
+        return stored_file.file_id
 
-    async def _store_and_update_extracted_images(self, processed_visuals, pdf_file_id: str) -> List[StoredVisualContent]:
+    async def _store_and_update_extracted_images(
+        self, processed_visuals, pdf_file_id: str
+    ) -> List[StoredVisualContent]:
         """Store extracted images and return stored visual content models.
-        
+
         Args:
             processed_visuals: List of processed visual models with copyright info
             pdf_file_id: ID of the parent PDF file
-            
+
         Returns:
             List of StoredVisualContent with assist_image_id and storage URLs
         """
         updated_visuals = []
-        
+
         for visual in processed_visuals:
             # Determine image type and protection status
             image_type = self._map_visual_type_to_file_type(visual.type)
-            is_protected = visual.is_protected if hasattr(visual, 'is_protected') else None
-            
+            is_protected = (
+                visual.is_protected if hasattr(visual, "is_protected") else None
+            )
+
             # For charts and tables, always set is_protected = false
             if visual.type in ["chart", "table"]:
                 is_protected = None
-            
-            # Create image schema 
+
+            # Create image schema
             search_url = None
             if is_protected and visual.type == "image":
                 # For protected images, get the search URL from content
-                if hasattr(visual.content, 'url'):
+                if hasattr(visual.content, "url"):
                     search_url = visual.content.url
-            
+
             # image title
             image_data = ImageCreateSchema(
                 file_id=str(pdf_file_id),
@@ -798,24 +849,26 @@ class DataProcessingService:
                 proposed_image_type=image_type,
                 is_protected=is_protected,
                 searched_image_url=search_url,
-                description=visual.description
+                description=visual.description,
             )
             # Store the image
-            stored_image = await self.storage_service.save_image_via_api(
+            stored_image = await self.interactive_db_repository.save_image(
                 image_data=image_data,
-                image_bytes=visual.image_bytes if hasattr(visual, 'image_bytes') else b'',
+                image_bytes=(
+                    visual.image_bytes if hasattr(visual, "image_bytes") else b""
+                ),
                 image_name=f"{visual.type}_{visual.visual_index}.jpg",
-                content_type="image/jpeg"
+                content_type="image/jpeg",
             )
-            
+
             # Update visual content URL based on protection status
             updated_content = visual.content
 
             if is_protected is None or is_protected is True:
                 pass
-            elif is_protected is False and visual.type == "image" :
-                updated_content.url = stored_image.original_image_url                    
-            
+            elif is_protected is False and visual.type == "image":
+                updated_content.url = stored_image.original_image_url
+
             # Create StoredVisualContent with assist_image_id
             stored_visual = StoredVisualContent(
                 type=visual.type,
@@ -823,26 +876,26 @@ class DataProcessingService:
                 visual_index=visual.visual_index,
                 description=visual.description,
                 assist_image_id=str(stored_image.id),
-                is_protected=is_protected if hasattr(visual, 'is_protected') else None
+                is_protected=is_protected if hasattr(visual, "is_protected") else None,
             )
-                
+
             updated_visuals.append(stored_visual)
-            
+
         return updated_visuals
 
     def _map_visual_type_to_file_type(self, visual_type: str) -> ImageTypeEnum:
         """Map visual type to FileImageTypeEnum.
-        
+
         Args:
             visual_type: Type of visual ("chart", "table", "image")
-            
+
         Returns:
             FileImageTypeEnum: Corresponding enum value
         """
         type_mapping = {
             "chart": ImageTypeEnum.CHART,
             "table": ImageTypeEnum.TABLE,
-            "image": ImageTypeEnum.IMAGE
+            "image": ImageTypeEnum.IMAGE,
         }
         return type_mapping.get(visual_type, ImageTypeEnum.IMAGE)
 
@@ -859,4 +912,3 @@ class DataProcessingService:
         punctuation_table = str.maketrans("", "", string.punctuation)
         cleaned_text = text.translate(punctuation_table)
         return cleaned_text.lower()
-    

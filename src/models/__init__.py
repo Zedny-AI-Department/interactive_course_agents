@@ -33,15 +33,15 @@ from .transcription_output_model import (
     AlignedParagraph,
 )
 from .final_output_models import ProcessedParagraph, EducationalContent
-from .storage_models import (
+from .interactive_db_models import (
     ImageTypeEnum,
     FileCreateSchema,
     ImageCreateSchema,
     FileResponseSchema,
     ImageResponseSchema,
+    GetTypeItemResponseSchema
 )
 
-from .storage_models import FileTypesResponseSchema
 
 # Legacy model names - these map to new models for backward compatibility
 GeneratedParagraphWithVisualListModel = LLMParagraphList
@@ -96,10 +96,15 @@ __all__ = [
     "EducationalContent",
     "AlignedParagraph",
     "FileImageTypeEnum",
+
+    # Interactive DB models:
+    "ImageTypeEnum",
     "FileCreateSchema",
     "ImageCreateSchema", 
     "FileResponseSchema",
     "ImageResponseSchema",
+    "GetTypeItemResponseSchema",
+
     # Legacy model names for backward compatibility
     "SegmentTranscriptionModelWithWords",
     "WordTranscriptionModel",

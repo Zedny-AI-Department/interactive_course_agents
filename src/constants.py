@@ -1,9 +1,15 @@
 class StorageAPIRoutes:
-    FILES = "/assist-files/"
-    IMAGES = "/assist-images/"
-    FILE_TYPES = "/assist-files/types/"
-    IMAGE_3D = "/assist-images/{image_id}/3d-image/"
-    VIDEO = "/interactive-courses/videos/upload/"
+    #  Types routes
+    GET_FILE_TYPES = "/assist-files/types/"
+    GET_WORD_TYPES = "/interactive_content/word-types/"
+    GET_KEYWORD_TYPES = "/interactive_content/keyword-types/"
+    GET_VISUAL_TYPES = "/interactive_content/visual-types/"
+    GET_CHART_TYPES = "/interactive_content/chart-types/"
+    # Create routes
+    CREATE_IMAGES = "/assist-images/"
+    CREATE_ASSIST_FILE = "/assist-files/"
+    CREATE_IMAGE_3D = "/assist-images/{image_id}/3d-image/"
+    UPLOAD_VIDEO = "/interactive-courses/videos/upload/"
 
 
 class ParagraphWithVisualPrompt:

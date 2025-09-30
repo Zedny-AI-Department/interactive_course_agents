@@ -41,7 +41,16 @@ from .interactive_db_models import (
     ImageResponseSchema,
     GetTypeItemResponseSchema
 )
-
+from .mapped_output_models import (
+    MappedChartData,
+    MappedImageData,
+    MappedTableData,
+    MappedVisualContent,
+    MappedKeyWord,
+    MappedWord,
+    MappedParagraph,
+    MappedEducationalContent
+)
 
 # Legacy model names - these map to new models for backward compatibility
 GeneratedParagraphWithVisualListModel = LLMParagraphList
@@ -123,6 +132,13 @@ __all__ = [
     "DescribedVisualModel",
     "SearchedImageVisualModel",
 
-    # Storage model
-    "FileTypesResponseSchema",
+    # Mapped model:
+    "MappedChartData",
+    "MappedImageData",
+    "MappedTableData",
+    "MappedVisualContent",
+    "MappedKeyWord",
+    "MappedWord",
+    "MappedParagraph",
+    "MappedEducationalContent"    
 ]

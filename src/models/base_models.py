@@ -48,6 +48,7 @@ class WordTimestamp(BaseModel):
     word: str = Field(description="The word text")
     start: float = Field(description="Start time of the word in seconds")
     end: float = Field(description="End time of the word in seconds")
+    word_type: Literal["text"]
 
 
 class TimestampedContent(BaseModel):

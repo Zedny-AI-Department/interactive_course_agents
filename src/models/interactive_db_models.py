@@ -41,11 +41,9 @@ class GetTypesResponseSchema(BaseModel):
 
 # Save file response schema
 class FileResponseSchema(BaseModel):
-    file_id: uuid.UUID
+    file_id: uuid.UUID = Field(alias="id")
     file_name: str
     file_type_id: uuid.UUID
-    bucket_name: str
-    storage_path: str
     file_url: Optional[str]
 
 

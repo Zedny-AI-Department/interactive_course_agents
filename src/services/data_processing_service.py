@@ -24,6 +24,14 @@ from src.models import (
     StoredVisualContent,
     LLMParagraphWithVisualRef,
     AlignedParagraph,
+    MappedEducationalContent,
+    MappedParagraph,
+    MappedChartData,
+    MappedImageData,
+    MappedTableData,
+    MappedVisualContent,
+    MappedKeyWord,
+    MappedWord
 )
 from src.models.visual_content_models import SearchAgentVisualContent
 from src.models.interactive_db_models import (
@@ -116,11 +124,12 @@ class DataProcessingService:
             video_paragraph_alignment_result=video_alignment_result,
             generated_output=generated_output,
         )
-        return EducationalContent(
+        agent_final_result = EducationalContent(
             paragraphs=combined_result,
             video_metadata=video_metadata,
             video_file_id=str(video_file.file_id),
         )
+        return await self._map_final_result(final_result=agent_final_result)
 
     async def extract_and_align_pdf_visuals(
         self,
@@ -182,12 +191,13 @@ class DataProcessingService:
             generated_output=aligned_paragraphs,
             is_search_agent=True,
         )
-        return EducationalContent(
+        agent_final_result = EducationalContent(
             paragraphs=combined_result,
             video_metadata=video_metadata,
             assist_file_id=str(pdf_file_id),
             video_file_id=str(video_file.file_id),
         )
+        return await self._map_final_result(final_result=agent_final_result)
 
     async def extract_and_align_pdf_visuals_with_copyright_detection(
         self,
@@ -260,12 +270,13 @@ class DataProcessingService:
             is_search_agent=True,
         )
 
-        return EducationalContent(
+        agent_final_result =  EducationalContent(
             paragraphs=combined_result,
             video_metadata=video_metadata,
             assist_file_id=str(pdf_file_id),
             video_file_id=str(video_file.file_id),
         )
+        return await self._map_final_result(final_result=agent_final_result)
 
     async def _extract_srt_text(self, srt_file: UploadFile) -> str:
         """Extract text content from SRT file.
@@ -534,7 +545,7 @@ class DataProcessingService:
             ParagraphWithVisualModel: Complete paragraph model
         """
         word_timestamps = [
-            WordTimestamp(word=word.text, start=word.start, end=word.end)
+            WordTimestamp(word=word.text, start=word.start, end=word.end, word_type="text")
             for word in aligned_paragraph.paragraph_words
         ]
 
@@ -912,3 +923,119 @@ class DataProcessingService:
         punctuation_table = str.maketrans("", "", string.punctuation)
         cleaned_text = text.translate(punctuation_table)
         return cleaned_text.lower()
+
+    async def _map_final_result(
+        self, final_result: EducationalContent
+    ) -> MappedEducationalContent:
+        """Map final result for preparation for creating video"""
+        word_types = (await self.interactive_db_repository.get_word_types()).result
+        keyword_types = (await self.interactive_db_repository.get_keyword_types()).result
+        visual_types = (await self.interactive_db_repository.get_visual_types()).result
+
+        mapped_paragraphs: List[MappedParagraph] = []
+        for paragraph in final_result.paragraphs:
+            # Map words
+            mapped_paragraph_words = []
+            for word in paragraph.word_timestamps:
+                mapped_paragraph_words.append(
+                    MappedWord(
+                        word=word.word,
+                        start_time=word.start,
+                        end_time=word.end,
+                        word_type_id=str(
+                            [
+                                wtype.id
+                                for wtype in word_types
+                                if word.word_type.strip().lower() == wtype.name.strip().lower()
+                            ][0]
+                        ),
+                    )
+                )
+
+            # Map keywords
+            mapped_paragraph_keywords = []
+            for keyword in paragraph.keywords:
+                mapped_paragraph_keywords.append(
+                    MappedKeyWord(
+                        word=keyword.word,
+                        keyword_type_id=str(
+                            [
+                                kwtype.id
+                                for kwtype in keyword_types
+                                if keyword.type.strip().lower() == kwtype.name.strip().lower()
+                            ][0]
+                        ),
+                    )
+                )
+
+            # Map visual content
+            if paragraph.visual_content:
+                mapped_visual_type_id = str(
+                    [
+                        vtype.id
+                        for vtype in visual_types
+                        if paragraph.visual_content.type.strip().lower() == vtype.name.strip().lower()
+                    ][0]
+                )
+
+                mapped_image_data = None
+                mapped_chart_data = None
+                mapped_table_data = None
+                if paragraph.visual_content.type == "image":
+                    mapped_image_data = MappedImageData(
+                        image_type="2d_image",
+                        url=paragraph.visual_content.content.url,
+                        title=paragraph.visual_content.content.title,
+                        alt_text=paragraph.visual_content.content.alt_text,
+                    )
+                elif paragraph.visual_content.type == "table":
+                    mapped_table_data = MappedTableData(
+                        title=paragraph.visual_content.content.title,
+                        headers=paragraph.visual_content.content.headers,
+                        rows=paragraph.visual_content.content.data,
+                        caption=paragraph.visual_content.content.caption,
+                    )
+                elif paragraph.visual_content.type == "chart":
+                    chart_types = (await self.interactive_db_repository.get_chart_types()).result
+                    visual_content = paragraph.visual_content
+                    mapped_chart_data = MappedChartData(
+                        chart_type_id=str(
+                            [
+                                ctype.id
+                                for ctype in chart_types
+                                if visual_content.content.chart_type.strip().lower()
+                                == ctype.name.strip().lower()
+                            ][0]
+                        ),
+                        title=visual_content.content.title,
+                        labels=visual_content.content.data.labels,
+                        data=visual_content.content.data.datasets,
+                    )
+                mapped_visual_content = MappedVisualContent(
+                    visual_type_id=mapped_visual_type_id,
+                    assist_image_id=paragraph.visual_content.assist_image_id if paragraph.visual_content.assist_image_id else None,
+                    start_time=paragraph.visual_content.start_time,
+                    image_data=mapped_image_data,
+                    chart_data=mapped_chart_data,
+                    table_data=mapped_table_data,
+                )
+            else:
+                mapped_visual_content = None
+
+            mapped_paragraphs.append(
+                MappedParagraph(
+                    view_index=paragraph.paragraph_id,
+                    paragraph_text=paragraph.paragraph_text,
+                    start_time=paragraph.start_time,
+                    end_time=paragraph.end_time,
+                    words=mapped_paragraph_words,
+                    keywords=mapped_paragraph_keywords,
+                    visual_data=mapped_visual_content,
+                )
+            )
+        return MappedEducationalContent(
+            paragraphs=mapped_paragraphs,
+            video_metadata=final_result.video_metadata,
+            assist_file_id=final_result.assist_file_id,
+            video_file_id=final_result.video_file_id,
+        )

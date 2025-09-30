@@ -14,29 +14,28 @@ class InteractiveDBRepository:
     # Get routes methods
     async def get_file_types(self) -> GetTypesResponseSchema:
         """Get file types from API endpoint."""
-        return GetTypesResponseSchema(**await self.interactive_db_client.get_file_types)
+        api_result = await self.interactive_db_client.get_file_types() 
+        return GetTypesResponseSchema(**api_result)
 
     async def get_word_types(self) -> GetTypesResponseSchema:
         """Get word types from API endpoint."""
-        return GetTypesResponseSchema(**await self.interactive_db_client.get_word_types)
+        api_result = await self.interactive_db_client.get_word_types()
+        return GetTypesResponseSchema(**api_result)
 
     async def get_keyword_types(self) -> GetTypesResponseSchema:
         """Get keyword types from API endpoint."""
-        return GetTypesResponseSchema(
-            **await self.interactive_db_client.get_keyword_types
-        )
+        api_result = await self.interactive_db_client.get_keyword_types()
+        return GetTypesResponseSchema(**api_result)
 
     async def get_visual_types(self) -> GetTypesResponseSchema:
         """Get visual types from API endpoint."""
-        return GetTypesResponseSchema(
-            **await self.interactive_db_client.get_visual_types
-        )
+        api_result = await self.interactive_db_client.get_visual_types()
+        return GetTypesResponseSchema(**api_result)
 
     async def get_chart_types(self) -> GetTypesResponseSchema:
         """Get chart types from API endpoint."""
-        return GetTypesResponseSchema(
-            **await self.interactive_db_client.get_chart_types
-        )
+        api_result = await self.interactive_db_client.get_chart_types()
+        return GetTypesResponseSchema(**api_result)
 
     async def save_assist_file(
         self, file_bytes: str, file_name, file_type_id: str, content_type: str
@@ -80,10 +79,9 @@ class InteractiveDBRepository:
         """Save video metadata to database via API."""
         try:
             video_file = {"video_file": (video_name, video_bytes, content_type)}
-            api_result = FileResponseSchema(
-                **await self.interactive_db_client.save_video(video_file=video_file)
-            )
-            return api_result
+            
+            api_result = await self.interactive_db_client.save_video(video_file=video_file)
+            return FileResponseSchema(**api_result)
         except Exception as e:
             raise Exception(f"Error while saving video: {str(e)}")
 

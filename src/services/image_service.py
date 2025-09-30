@@ -182,7 +182,6 @@ class ImageProcessingService:
                 "fal-ai/hyper3d/rodin",
                 arguments=input_args,
             )
-            print(f"result: {type(result)}, {result}")
             return result["model_mesh"]
         except Exception as e:
             raise Exception(f"Failed to convert image to 3D: {str(e)}")

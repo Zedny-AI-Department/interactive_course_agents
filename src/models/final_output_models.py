@@ -54,6 +54,7 @@ class ProcessedParagraph(TimestampedContent):
             {"word": word.word, "start": word.start, "end": word.end}
             for word in self.word_timestamps
         ]
+    
 
     @property
     def visuals(self) -> Optional[dict]:

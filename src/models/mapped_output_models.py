@@ -3,7 +3,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from src.models.base_models import TimestampedContent
-from src.models.task_models import VideoMetadata
+from src.models.video_metadata_model import VideoMetadata
 
 
 class MappedWord(BaseModel):

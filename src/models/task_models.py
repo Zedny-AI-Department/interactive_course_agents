@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from enum import Enum
 
-from src.models.video_metadata_model import VideoMetadata
+from src.models.video_metadata_model import VideoMetadataRequest
 
 # Task Enums
 class TaskStatus(str, Enum):
@@ -35,7 +35,7 @@ class TaskData(BaseModel):
     updated_at: datetime
     result: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
-    video_metadata: Optional[VideoMetadata] = None
+    video_metadata: Optional[VideoMetadataRequest] = None
     metadata: Optional[Dict[str, Any]] = None
 
 
@@ -50,7 +50,7 @@ class TaskResponse(BaseModel):
     result: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
-
+    video_metadata: Optional[VideoMetadataRequest] = None
 
 class CreateTaskResponse(BaseModel):
     task_id: str

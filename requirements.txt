@@ -66,3 +66,4 @@ aioredis==2.0.1
 PyMuPDF==1.26.4
 fal-client==0.7.0
 tavily-python==0.7.12
+ffmpeg-python==0.2.0

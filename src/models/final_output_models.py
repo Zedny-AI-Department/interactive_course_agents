@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from .base_models import KeywordItem, WordTimestamp, TimestampedContent
 from .visual_content_models import VisualContent
-from .task_models import VideoMetadata
+from src.models.video_metadata_model import VideoMetadata
 
 
 class ProcessedParagraph(TimestampedContent):

@@ -42,7 +42,7 @@ def get_file_service():
 def get_data_processing_service():
     return DataProcessingService(
         interactive_db_repository=get_interactive_db_repository(),
-        video_service=get_transcription_service(),
+        transcription_service=get_transcription_service(),
         llm_service=get_llm_service(),
         srt_service=get_srt_service(),
         img_service=get_image_service(),

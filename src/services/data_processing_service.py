@@ -114,7 +114,8 @@ class DataProcessingService:
             )
         )
         video_duration = get_video_duration(video_bytes)
-        video_metadata = VideoMetadata(**video_metadata.model_dump(), video_duration=video_duration)
+        video_duration_str = f"{video_duration//3600:02}:{(video_duration%3600)//60:02}:{video_duration%60:02}"
+        video_metadata = VideoMetadata(**video_metadata.model_dump(), video_duration=video_duration_str)
         # Reset file position for video processing
         await media_file.seek(0)
 
@@ -165,8 +166,8 @@ class DataProcessingService:
             )
         )
         video_duration = get_video_duration(video_bytes)
-        video_metadata = VideoMetadata(**video_metadata.model_dump(), video_duration=video_duration)
-        # Reset file position for video processing
+        video_duration_str = f"{video_duration//3600:02}:{(video_duration%3600)//60:02}:{video_duration%60:02}"
+        video_metadata = VideoMetadata(**video_metadata.model_dump(), video_duration=video_duration_str)
         await media_file.seek(0)
 
         # Store the PDF file
@@ -243,7 +244,8 @@ class DataProcessingService:
             )
         )
         video_duration = get_video_duration(video_bytes)
-        video_metadata = VideoMetadata(**video_metadata.model_dump(), video_duration=video_duration)
+        video_duration_str = f"{video_duration//3600:02}:{(video_duration%3600)//60:02}:{video_duration%60:02}"
+        video_metadata = VideoMetadata(**video_metadata.model_dump(), video_duration=video_duration_str)
         # Reset file position for video processing
         await media_file.seek(0)
 

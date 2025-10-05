@@ -31,7 +31,9 @@ from src.models import (
     MappedTableData,
     MappedVisualContent,
     MappedKeyWord,
-    MappedWord
+    MappedWord,
+    VideoMetadata,
+    VideoMetadataRequest
 )
 from src.models.visual_content_models import SearchAgentVisualContent
 from src.models.interactive_db_models import (
@@ -41,7 +43,7 @@ from src.models.interactive_db_models import (
     ImageTypeEnum,
 )
 from src.constants import ParagraphAlignmentWithVisualPrompt, ParagraphWithVisualPrompt
-
+from src.utils import get_video_duration
 
 class DataProcessingService:
     """Service for processing multimedia content and aligning it with visual elements.
@@ -88,7 +90,7 @@ class DataProcessingService:
         self.interactive_db_repository = interactive_db_repository
 
     async def generate_paragraphs_with_visuals(
-        self, srt_file: UploadFile, media_file: UploadFile, video_metadata
+        self, srt_file: UploadFile, media_file: UploadFile, video_metadata: VideoMetadataRequest
     ) -> EducationalContent:
         """Generate paragraphs with visual elements from SRT and media files.
 
@@ -111,6 +113,8 @@ class DataProcessingService:
                 content_type=media_file.content_type or "video/mp4",
             )
         )
+        video_duration = get_video_duration(video_bytes)
+        video_metadata = VideoMetadata(**video_metadata.model_dump(), video_duration=video_duration)
         # Reset file position for video processing
         await media_file.seek(0)
 
@@ -136,7 +140,7 @@ class DataProcessingService:
         srt_file: UploadFile,
         media_file: UploadFile,
         pdf_file: UploadFile,
-        video_metadata,
+        video_metadata: VideoMetadataRequest,
     ) -> EducationalContent:
         """Extract visuals from PDF and align them with paragraphs from SRT and media files.
 
@@ -160,7 +164,8 @@ class DataProcessingService:
                 content_type=media_file.content_type or "video/mp4",
             )
         )
-
+        video_duration = get_video_duration(video_bytes)
+        video_metadata = VideoMetadata(**video_metadata.model_dump(), video_duration=video_duration)
         # Reset file position for video processing
         await media_file.seek(0)
 
@@ -204,7 +209,7 @@ class DataProcessingService:
         srt_file: UploadFile,
         media_file: UploadFile,
         pdf_file: UploadFile,
-        video_metadata,
+        video_metadata: VideoMetadataRequest,
     ) -> EducationalContent:
         """Extract visuals from PDF with copyright detection and align them with paragraphs.
 
@@ -237,7 +242,8 @@ class DataProcessingService:
                 content_type=media_file.content_type or "video/mp4",
             )
         )
-
+        video_duration = get_video_duration(video_bytes)
+        video_metadata = VideoMetadata(**video_metadata.model_dump(), video_duration=video_duration)
         # Reset file position for video processing
         await media_file.seek(0)
 

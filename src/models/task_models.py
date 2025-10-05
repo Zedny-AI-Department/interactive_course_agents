@@ -4,7 +4,9 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from enum import Enum
 
+from src.models.video_metadata_model import VideoMetadata
 
+# Task Enums
 class TaskStatus(str, Enum):
     PENDING = "pending"
     PROCESSING = "processing"
@@ -21,19 +23,7 @@ class TaskStage(str, Enum):
     COMPLETED = "completed"
 
 
-class AgentMode(str, Enum):
-    GENERATE = "generate"
-    ALWAYS_SEARCH = "always_search"
-    SEARCH_FOR_COPYRIGHT = "search_for_copyright"
-
-
-class VideoMetadata(BaseModel):
-    course_id: UUID = Field(..., description="Course identifier")
-    chapter_id: UUID = Field(..., description="Chapter identifier")
-    title: str = Field(..., description="Video name")
-    agent_mode: AgentMode = Field(..., description="Processing mode used")
-    video_duration: str
-    view_index: int
+# Task Models
 
 class TaskData(BaseModel):
     task_id: str
@@ -59,7 +49,6 @@ class TaskResponse(BaseModel):
     updated_at: datetime
     result: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
-    video_metadata: Optional[VideoMetadata] = None
     metadata: Optional[Dict[str, Any]] = None
 
 

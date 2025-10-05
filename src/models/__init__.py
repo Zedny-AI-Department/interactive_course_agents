@@ -51,7 +51,8 @@ from .mapped_output_models import (
     MappedParagraph,
     MappedEducationalContent
 )
-
+from .task_models import TaskStage, TaskData, TaskResponse, CreateTaskResponse, TaskStatus
+from .video_metadata_model import AgentMode, VideoMetadataRequest, VideoMetadata
 # Legacy model names - these map to new models for backward compatibility
 GeneratedParagraphWithVisualListModel = LLMParagraphList
 GeneratedVisualItemModel = LLMGeneratedVisualItem
@@ -140,5 +141,17 @@ __all__ = [
     "MappedKeyWord",
     "MappedWord",
     "MappedParagraph",
-    "MappedEducationalContent"    
+    "MappedEducationalContent",
+
+    # Task models
+    "TaskStage",
+    "TaskData",
+    "TaskResponse", 
+    "CreateTaskResponse", 
+    "TaskStatus",
+
+    # Video metadata models
+    "AgentMode",
+    "VideoMetadataRequest", 
+    "VideoMetadata", 
 ]

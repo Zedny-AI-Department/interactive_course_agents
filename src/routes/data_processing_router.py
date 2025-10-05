@@ -12,7 +12,8 @@ from src.services.data_processing_service import DataProcessingService
 from src.services.background_processor import BackgroundProcessor
 from src.container import get_data_processing_service, get_background_processor
 from src.models import EducationalContent
-from src.models.task_models import CreateTaskResponse, TaskResponse, UserTasksResponse, AgentMode, VideoMetadata
+from src.models.task_models import CreateTaskResponse, TaskResponse, UserTasksResponse
+from src.models import VideoMetadataRequest, AgentMode
 from src.services import task_manager, auth_service
 
 
@@ -32,7 +33,6 @@ async def create_general_processing_task(
     course_id: str = Query(..., description="Course identifier"),
     chapter_id: str = Query(..., description="Chapter identifier"),
     title: str = Query(..., description="Video name"),
-    video_duration: str = Query(..., description=("video duration")),
     view_index: int = Query(..., description="videw index"),
     pdf_file: UploadFile = File(None, description="Optional PDF assistance file"),
     user_id: str = Depends(auth_service.get_current_user_id),
@@ -41,11 +41,10 @@ async def create_general_processing_task(
     """Create a background task for general data processing with different agent modes."""
     try:
         # Create task with course metadata
-        video_metadata = VideoMetadata(
+        video_metadata = VideoMetadataRequest(
             course_id=course_id,
             chapter_id=chapter_id,
             title=title,
-            video_duration=video_duration,
             view_index=view_index,
             agent_mode=agent_mode
         )
@@ -129,7 +128,7 @@ async def create_generation_task(
     """Create a background task to generate educational content."""
     try:
         # Create task with course metadata
-        video_metadata = VideoMetadata(
+        video_metadata = VideoMetadataRequest(
             course_id=course_id,
             chapter_id=chapter_id,
             video_name=video_name,
@@ -186,7 +185,7 @@ async def create_pdf_visuals_task(
     """Create a background task to extract PDF visuals and align them."""
     try:
         # Create task with course metadata
-        video_metadata = VideoMetadata(
+        video_metadata = VideoMetadataRequest(
             course_id=course_id,
             chapter_id=chapter_id,
             video_name=video_name,
@@ -245,7 +244,7 @@ async def create_pdf_visuals_copyright_task(
     """Create a background task to extract PDF visuals with copyright detection."""
     try:
         # Create task with course metadata
-        video_metadata = VideoMetadata(
+        video_metadata = VideoMetadataRequest(
             course_id=course_id,
             chapter_id=chapter_id,
             video_name=video_name,
@@ -418,7 +417,7 @@ async def generate_educational_content(
     """Synchronous processing endpoint (for backward compatibility)."""
     try:
         # Create course metadata
-        video_metadata = VideoMetadata(
+        video_metadata = VideoMetadataRequest(
             course_id=course_id,
             chapter_id=chapter_id,
             video_name=video_name,
@@ -451,7 +450,7 @@ async def extract_pdf_visuals_and_align(
     """Synchronous processing endpoint (for backward compatibility)."""
     try:
         # Create course metadata
-        video_metadata = VideoMetadata(
+        video_metadata = VideoMetadataRequest(
             course_id=course_id,
             chapter_id=chapter_id,
             video_name=video_name,
@@ -486,7 +485,7 @@ async def extract_pdf_visuals_with_copyright_and_align(
     """Synchronous processing endpoint with copyright detection (for backward compatibility)."""
     try:
         # Create course metadata
-        video_metadata = VideoMetadata(
+        video_metadata = VideoMetadataRequest(
             course_id=course_id,
             chapter_id=chapter_id,
             video_name=video_name,

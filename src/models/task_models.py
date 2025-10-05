@@ -45,7 +45,7 @@ class TaskData(BaseModel):
     updated_at: datetime
     result: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
-    video_metadata: VideoMetadata
+    video_metadata: Optional[VideoMetadata] = None
     metadata: Optional[Dict[str, Any]] = None
 
 
@@ -59,7 +59,7 @@ class TaskResponse(BaseModel):
     updated_at: datetime
     result: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
-    video_metadata: VideoMetadata
+    video_metadata: Optional[VideoMetadata] = None
     metadata: Optional[Dict[str, Any]] = None
 
 

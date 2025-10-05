@@ -457,7 +457,8 @@ class BackgroundProcessor:
 
                     # Convert image to 3D using local file path
                     result = await self.img_service.convert_image_to_3d(
-                        image_path=image_temp.name,
+                        image_bytes=image_content,
+                        image_name=image_temp.name,
                         geometry_format=geometry_format,
                         quality=quality,
                     )

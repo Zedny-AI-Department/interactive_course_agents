@@ -112,7 +112,7 @@ async def convert_image_url_to_3d_async(
     """
     try:
         # Create task
-        task_id = await task_manager.create_task(user_id, "convert_image_url_to_3d")
+        task_id = await task_manager.create_task(user_id, task_type="convert_image_url_to_3d")
 
         # Add background task
         background_tasks.add_task(

@@ -7,7 +7,7 @@ from src.config import settings
 from src.models import DetailedTranscription, ParagraphItem, MediaAlignmentResult
 
 
-class VideoProcessingService:
+class TranscriptionService:
     """A service that handles interactions with video processing tools."""
 
     def __init__(self):

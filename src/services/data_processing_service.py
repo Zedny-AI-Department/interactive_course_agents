@@ -4,7 +4,7 @@ import string
 
 from src.repositories import InteractiveDBRepository
 from src.models.llm_response_models import LLMGeneratedVisualItem
-from src.services import VideoService, SRTService, LLMService
+from src.services import TranscriptionService, SRTService, LLMService
 from src.services.image_service import ImageProcessingService as ImageService
 from src.services.file_processing_service import FileProcessingService as FileService
 from src.models import (
@@ -56,7 +56,7 @@ class DataProcessingService:
     - Mapping visuals to specific word timestamps
 
     Attributes:
-        video_service: Service for video/audio processing and alignment
+        transcription_service: Service for video/audio processing and alignment
         srt_service: Service for SRT subtitle file processing
         llm_service: Service for Large Language Model interactions
         img_service: Service for image processing and search
@@ -65,7 +65,7 @@ class DataProcessingService:
 
     def __init__(
         self,
-        video_service: VideoService,
+        transcription_service: TranscriptionService,
         srt_service: SRTService,
         llm_service: LLMService,
         img_service: ImageService,
@@ -75,14 +75,14 @@ class DataProcessingService:
         """Initialize the DataProcessingService with required dependencies.
 
         Args:
-            video_service: Service for handling video/audio processing
+            transcription_service: Service for handling video/audio processing
             srt_service: Service for processing SRT subtitle files
             llm_service: Service for Large Language Model operations
             img_service: Service for image processing and search
             file_processing_service: Service for various file format processing
             interactive_db_repository: Repository for files and image DB operations
         """
-        self.video_service = video_service
+        self.transcription_service = transcription_service
         self.srt_service = srt_service
         self.llm_service = llm_service
         self.img_service = img_service
@@ -446,7 +446,7 @@ class DataProcessingService:
         Returns:
             ParagraphsAlignmentWithVideoResponse: Alignment result with timestamps
         """
-        return await self.video_service.align_paragraph_with_media(
+        return await self.transcription_service.align_paragraph_with_media(
             media_file=media_file, paragraphs=paragraphs
         )
 

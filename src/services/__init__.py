@@ -1,4 +1,4 @@
-from .video_service import VideoProcessingService as VideoService
+from .transcription_sevice import TranscriptionService as TranscriptionService
 from .srt_service import SRTProcessingService as SRTService
 from .llm_service import LLMService as LLMService
 from .data_processing_service import DataProcessingService
@@ -10,7 +10,7 @@ from .background_processor import BackgroundProcessor
 
 
 __all__ = [
-    "VideoService",
+    "TranscriptionService",
     "SRTService",
     "LLMService",
     "DataProcessingService",

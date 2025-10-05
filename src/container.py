@@ -1,7 +1,7 @@
 from src.clients import InteractiveDBClient
 from src.repositories import InteractiveDBRepository
 from src.services import (
-    VideoService,
+    TranscriptionService,
     LLMService,
     SRTService,
     DataProcessingService,
@@ -20,8 +20,8 @@ def get_interactive_db_client():
 def get_interactive_db_repository():
     return InteractiveDBRepository(interactive_db_client=get_interactive_db_client())
 
-def get_video_service():
-    return VideoService()
+def get_transcription_service():
+    return TranscriptionService()
 
 
 def get_llm_service():
@@ -42,7 +42,7 @@ def get_file_service():
 def get_data_processing_service():
     return DataProcessingService(
         interactive_db_repository=get_interactive_db_repository(),
-        video_service=get_video_service(),
+        video_service=get_transcription_service(),
         llm_service=get_llm_service(),
         srt_service=get_srt_service(),
         img_service=get_image_service(),

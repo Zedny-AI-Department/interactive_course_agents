@@ -35,7 +35,7 @@ from src.models import (
     VideoMetadata,
     VideoMetadataRequest
 )
-from src.models.visual_content_models import SearchAgentVisualContent
+from src.models.visual_content_models import LLMVisualContentWithCopyrightWithBytes, SearchAgentVisualContent
 from src.models.interactive_db_models import (
     FileResponseSchema,
     GetTypesResponseSchema,
@@ -874,7 +874,7 @@ class DataProcessingService:
             stored_image = await self.interactive_db_repository.save_image(
                 image_data=image_data,
                 image_bytes=(
-                    visual.image_bytes if hasattr(visual, "image_bytes") else b""
+                    visual.image_bytes
                 ),
                 image_name=f"{visual.type}_{visual.visual_index}.jpg",
                 content_type="image/jpeg",

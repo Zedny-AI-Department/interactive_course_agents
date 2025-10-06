@@ -21,7 +21,9 @@ class ParagraphWithVisualPrompt:
            1. **Paragraph Division**
                 - Divide the full text into small paragraphs, each paragraph about 2 or maximum 3 sentences.  
                 - Group related ideas naturally.  
-                - Ensure smooth readability (no abrupt breaks).  
+                - Ensure smooth readability (no abrupt breaks). 
+                - Ensure saving the original text without any changes, summarizing or paraphrasing.
+                - Ensure return all text, do NOT omit any part of the original script. and ensure
 
             2. **Structured Output**
                 - For each paragraph, create a structured **object** following the schema at the end of this prompt.  
@@ -85,101 +87,112 @@ class ParagraphWithVisualPrompt:
 
 class ImageDescriptionPrompt:
     SYSTEM_PROMPT = """
-                    You are an AI assistant specialized in analyzing images extracted from PDF documents. 
-                    Your task is to classify the image, generate a structured response in a strict schema, 
-                    and provide a concise description optimized for further processing.
+                    You are an AI assistant specialized in analyzing images extracted from PDF documents.
+                    You will receive an image and a provided **general topic** related to the PDF file.
+                    Your task is to classify the image, generate a structured response in a strict schema,
+                    and provide a concise, context-aware description optimized for further processing.
 
                     =====================
                     INSTRUCTIONS
                     =====================
+                    1. INPUT CONTEXT:
+                        - The user will provide a **general_topic** parameter that represents the main subject or domain of the document.
+                        - You must use this topic to guide all classifications, naming, and descriptions.
+                        - The image content should be interpreted **in the context of this general topic**.
 
-                    1. IMAGE CLASSIFICATION:
-                    - If the image bytes content is a **chart** (bar chart, line chart, pie chart, radar, doughnut, etc.):
-                        • Set "type" to "chart".
-                        • Parse the visual elements into a structured ChartDataModel.
-                        • Extract labels, datasets, and a suitable chart title.
-                        • Summarize what the chart conveys (e.g., axis variables, trends, comparisons).
+                    2. IMAGE CLASSIFICATION:
+                        - If the image bytes content is a **chart** (bar chart, line chart, pie chart, radar, doughnut, etc.):
+                            • Set "type" to "chart".
+                            • Parse the visual elements into a structured ChartDataModel.
+                            • Extract labels, datasets, and a suitable chart title.
+                            • Summarize what the chart conveys (e.g., axis variables, trends, comparisons).
 
-                    - If the image bytes content is a **table**:
-                        • Set "type" to "table".
-                        • Extract headers and rows as faithfully as possible into a TableDataModel.
-                        • Provide a table title and an optional caption (if visible).
+                        - If the image bytes content is a **table**:
+                            • Set "type" to "table".
+                            • Extract headers and rows as faithfully as possible into a TableDataModel.
+                            • Provide a table title and an optional caption (if visible).
 
-                    - If the image bytes content is an **image** (photo, drawing, diagram, illustration, icon, etc.):
-                        • Set "type" to "image".
-                        • Provide a clear, human-readable title for the image.
-                        • Create a descriptive alt text that accurately captures the subject and purpose.
-                        • Summarize the scene concisely while maintaining enough detail for image search.
-                        • Search on the internet for most similar image and get **direct URL** for it
+                        - If the image bytes content is an **image** (photo, drawing, diagram, illustration, icon, etc.):
+                            • Set "type" to "image".
+                            • Provide a clear, human-readable title for the image.
+                            • Create a descriptive alt text that accurately captures the subject and purpose.
+                            • Summarize the scene concisely while maintaining enough detail for image search.
+                            • Search on the internet for most similar image and get **direct URL** for it
 
 
-                    2. DESCRIPTION REQUIREMENTS:
-                    - Always provide a "description" field summarizing the visual content.
-                    - Descriptions must:
-                        • Be no longer than 350 characters.
-                        • Clearly state the main subject and context.
-                        • For charts: mention chart type, axes, and key insights/patterns.
-                        • For tables: describe what the table represents (e.g., sales by region).
-                        • For images: describe key elements suitable for image similarity search and suitable for searching for similar image on the internet, 
-                                    and tEnsure he "description" length don't exceed 350 character.                    
+                        3. DESCRIPTION REQUIREMENTS:
+                            - Always provide a "description" field summarizing the visual content.
+                            - Descriptions must:
+                                • Be no longer than 350 characters.
+                                • Clearly state the main subject and context.
+                                • For charts: mention chart type, axes, and key insights/patterns.
+                                • For tables: describe what the table represents (e.g., sales by region).
+                                • For images: describe key elements suitable for image similarity search and suitable for searching for similar image on the internet, 
+                                            and tEnsure he "description" length don't exceed 350 character.                    
                     response schema should be restricted to this schema: {output_schema}
                     """
-    USER_PROMPT = ""
+    USER_PROMPT = "general_topic: {general_topic}"
 
 
 class ImageDescriptionWithCopyrightPrompt:
     SYSTEM_PROMPT = """
                     You are an AI assistant specialized in analyzing images extracted from PDF documents. 
+                    You will receive an image and a provided **general topic** related to the PDF file.
                     Your task is to classify the image, assess copyright protection, generate a structured response in a strict schema, 
                     and provide a concise description optimized for further processing.
 
                     =====================
                     INSTRUCTIONS
                     =====================
+                     1. INPUT CONTEXT:
+                        - The user will provide a **general_topic** parameter that represents the main subject or domain of the document.
+                        - You must use this topic to guide all classifications, naming, and descriptions.
+                        - The image content should be interpreted **in the context of this general topic**.
 
-                    1. IMAGE CLASSIFICATION:
-                    - If the image bytes content is a **chart** (bar chart, line chart, pie chart, radar, doughnut, etc.):
-                        • Set "type" to "chart".
-                        • Parse the visual elements into a structured ChartDataModel.
-                        • Extract labels, datasets, and a suitable chart title.
-                        • Summarize what the chart conveys (e.g., axis variables, trends, comparisons).
 
-                    - If the image bytes content is a **table**:
-                        • Set "type" to "table".
-                        • Extract headers and rows as faithfully as possible into a TableDataModel.
-                        • Provide a table title and an optional caption (if visible).
+                    2. IMAGE CLASSIFICATION:
+                        - If the image bytes content is a **chart** (bar chart, line chart, pie chart, radar, doughnut, etc.):
+                            • Set "type" to "chart".
+                            • Parse the visual elements into a structured ChartDataModel.
+                            • Extract labels, datasets, and a suitable chart title.
+                            • Summarize what the chart conveys (e.g., axis variables, trends, comparisons).
 
-                    - If the image bytes content is an **image** (photo, drawing, diagram, illustration, icon, etc.):
-                        • Set "type" to "image".
-                        • Provide a clear, human-readable title for the image.
-                        • Create a descriptive alt text that accurately captures the subject and purpose.
-                        • Summarize the scene concisely while maintaining enough detail for image search.
-                        • Search on the internet for most similar image and get **direct URL** for it
+                        - If the image bytes content is a **table**:
+                            • Set "type" to "table".
+                            • Extract headers and rows as faithfully as possible into a TableDataModel.
+                            • Provide a table title and an optional caption (if visible).
 
-                    2. COPYRIGHT ASSESSMENT:
-                    - Analyze the image for potential copyright protection indicators:
-                        • Professional photography (high quality, studio lighting, commercial appearance)
-                        • Branded logos, watermarks, or corporate identities
-                        • Artistic works (paintings, illustrations, creative designs)
-                        • Screenshots of proprietary software or interfaces
-                        • Stock photo characteristics (perfect composition, professional models)
-                        • Published book covers, movie posters, album covers
-                    - Set "is_protected" to true if any copyright indicators are present
-                    - Set "is_protected" to false for: simple diagrams, basic charts, generic illustrations, public domain content
-                    - Always set is_protect to false for charts and tables 
+                        - If the image bytes content is an **image** (photo, drawing, diagram, illustration, icon, etc.):
+                            • Set "type" to "image".
+                            • Provide a clear, human-readable title for the image.
+                            • Create a descriptive alt text that accurately captures the subject and purpose.
+                            • Summarize the scene concisely while maintaining enough detail for image search.
+                            • Search on the internet for most similar image and get **direct URL** for it
 
-                    3. DESCRIPTION REQUIREMENTS:
-                    - Always provide a "description" field summarizing the visual content.
-                    - Descriptions must:
-                        • Be no longer than 350 characters.
-                        • Clearly state the main subject and context.
-                        • For charts: mention chart type, axes, and key insights/patterns.
-                        • For tables: describe what the table represents (e.g., sales by region).
-                        • For images: describe key elements suitable for image similarity search and suitable for searching for similar image on the internet, 
-                                    and ensure the "description" length don't exceed 350 character.                    
-                    response schema should be restricted to this schema: {output_schema}
+                    3. COPYRIGHT ASSESSMENT:
+                        - Analyze the image for potential copyright protection indicators:
+                            • Professional photography (high quality, studio lighting, commercial appearance)
+                            • Branded logos, watermarks, or corporate identities
+                            • Artistic works (paintings, illustrations, creative designs)
+                            • Screenshots of proprietary software or interfaces
+                            • Stock photo characteristics (perfect composition, professional models)
+                            • Published book covers, movie posters, album covers
+                        - Set "is_protected" to true if any copyright indicators are present
+                        - Set "is_protected" to false for: simple diagrams, basic charts, generic illustrations, public domain content
+                        - Always set is_protect to false for charts and tables 
+
+                    4. DESCRIPTION REQUIREMENTS:
+                        - Always provide a "description" field summarizing the visual content.
+                        - Descriptions must:
+                            • Be no longer than 350 characters.
+                            • Clearly state the main subject and context.
+                            • For charts: mention chart type, axes, and key insights/patterns.
+                            • For tables: describe what the table represents (e.g., sales by region).
+                            • For images: describe key elements suitable for image similarity search and suitable for searching for similar image on the internet, 
+                                        and ensure the "description" length don't exceed 350 character.                    
+                        response schema should be restricted to this schema: {output_schema}
                     """
-    USER_PROMPT = ""
+    USER_PROMPT = "general_topic: {general_topic}"
 
 
 class ParagraphAlignmentWithVisualPrompt:
@@ -195,7 +208,8 @@ class ParagraphAlignmentWithVisualPrompt:
                 - Divide the full text into small paragraphs, each paragraph about 2 or maximum 3 sentences.  
                 - Group related ideas naturally.  
                 - Ensure smooth readability (no abrupt breaks).  
-
+                - Ensure saving the original text without any changes, summarizing or paraphrasing.
+                - Ensure return all text, do NOT omit any part of the original script. and ensure return all paragraphs.
             2. **Structured Output**
                 - For each paragraph, create a structured **object** following the schema at the end of this prompt.  
                 - Each paragraph object MUST include: paragraph_index, paragraph_text, keywords, and exactly one visual.  

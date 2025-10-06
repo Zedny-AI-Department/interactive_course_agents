@@ -257,6 +257,24 @@ class LLMVisualContentWithCopyright(LLMsearchedVisualContent):
     is_protected: bool = Field(description="Whether content is copyright protected")
 
 
+class LLMVisualContentWithCopyrightWithBytes(LLMsearchedVisualContent):
+    """Container for visual content with copyright assessment.
+
+    Extended version of LLMsearchedVisualContent that includes copyright protection
+    information for handling protected vs unprotected images.
+
+    Attributes:
+        type: The type of visual content contained
+        content: The actual visual content (chart, image, or table)
+        visual_index: Index reference to the visual
+        description: Description of the visual content
+        is_protected: Whether the content is protected by copyright
+        assist_image_id: ID of the stored image for visual content
+    """
+    is_protected: bool = Field(description="Whether content is copyright protected")
+    image_bytes: Optional[bytes] = Field(default=None, description="Raw binary image data")
+
+
 class StoredVisualContent(LLMVisualContentWithCopyright):
     """Container for stored visual content with assist_image_id.
 

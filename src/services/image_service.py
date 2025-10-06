@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 import fal_client
 import os
 
+from src.models.visual_content_models import LLMVisualContentWithCopyrightWithBytes
 from src.repositories.interactive_db_repository import InteractiveDBRepository
 from src.constants import ImageDescriptionPrompt, ImageDescriptionWithCopyrightPrompt
 from src.models import (
@@ -25,7 +26,7 @@ class ImageProcessingService:
         self.interactive_db_repository = interactive_db_repository
 
     async def search_images(
-        self, original_images: List[ExtractedImage]
+        self, original_images: List[ExtractedImage], file_description: str = ""
     ) -> List[LLMsearchedVisualContent]:
         processed_imgs = []
         for index, img in enumerate(original_images):
@@ -44,6 +45,7 @@ class ImageProcessingService:
                         "image_url": {"url": f"data:{mime_type};base64,{base64_image}"},
                     }
                 ],
+                general_topic=file_description,
             )
             try:
                 described_visual: LLMsearchedVisualContent = (
@@ -71,7 +73,7 @@ class ImageProcessingService:
         return processed_imgs
 
     async def search_images_with_copyright_detection(
-        self, original_images: List[ExtractedImage]
+        self, original_images: List[ExtractedImage], file_description = ""
     ) -> List[LLMVisualContentWithCopyright]:
         """Process images with copyright assessment.
 
@@ -88,8 +90,7 @@ class ImageProcessingService:
         for index, img in enumerate(original_images):
             # Decode image
             mime_type = mimetypes.guess_type("file.png")[0] or "image/jpeg"
-            base64_image = base64.b64encode(img.image_bytes).decode("utf-8")
-            img.image_bytes = base64_image
+            base64_image = base64.b64encode(img.image_bytes).decode("utf-8")            
             # Format prompt for copyright detection
             formatted_prompt = self.llm_service.format_prompt(
                 system_message=ImageDescriptionWithCopyrightPrompt.SYSTEM_PROMPT,
@@ -101,6 +102,7 @@ class ImageProcessingService:
                         "image_url": {"url": f"data:{mime_type};base64,{base64_image}"},
                     }
                 ],
+                general_topic=file_description
             )
             try:
                 described_visual: LLMVisualContentWithCopyright = (
@@ -140,9 +142,10 @@ class ImageProcessingService:
                     processed_img = LLMVisualContentWithCopyright(
                         **described_visual.model_dump()
                     )
-                processed_imgs.append(processed_img)
+                processed_img_with_bytes = LLMVisualContentWithCopyrightWithBytes(**processed_img.model_dump(), image_bytes=img.image_bytes)
+                processed_imgs.append(processed_img_with_bytes)
             except Exception as e:
-                continue
+                print(f"Error processing image {index + 1}: {str(e)}")
         return processed_imgs
 
     async def convert_image_to_3d(

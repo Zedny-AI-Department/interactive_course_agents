@@ -74,7 +74,7 @@ class InteractiveDBClient:
     ) -> Dict[str, Any]:
         """Save assist file with its metadata to database via API."""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(write=60.0, connect=10.0, read=60.0, pool=30.0)) as client:
                 response = await client.post(
                     f"{self.api_base_url}{StorageAPIRoutes.CREATE_ASSIST_FILE}",
                     data=assist_file_data,
@@ -88,7 +88,7 @@ class InteractiveDBClient:
     async def save_image(self, image_data: Dict, image_file: Dict) -> Dict[str, Any]:
         """Save image metadata to database via API."""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(write=60.0, connect=10.0, read=60.0, pool=30.0)) as client:
                 response = await client.post(
                     f"{self.api_base_url}{StorageAPIRoutes.CREATE_IMAGES}",
                     data=image_data,

@@ -42,7 +42,7 @@ class TranscriptionService:
     ) -> MediaAlignmentResult:
         """Extract the transcript of the video with timestamps."""
         file_bytes = await media_file.read()
-        timeout = httpx.Timeout(500.0, connect=10.0)
+        timeout = httpx.Timeout(write=1000.0, read=1000, connect=10.0, pool=100.0)
 
         try:
             if not paragraphs:

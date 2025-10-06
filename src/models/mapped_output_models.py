@@ -20,7 +20,7 @@ class MappedKeyWord(BaseModel):
 
 class MappedTableData(BaseModel):
     headers: List[str]
-    rows: List[List[str]]
+    rows: List[List[str | int | float]]
     title: str
     caption: Optional[str]
 
